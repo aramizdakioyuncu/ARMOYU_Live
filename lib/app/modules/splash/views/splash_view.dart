@@ -8,7 +8,7 @@ class SplashView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(SplashController());
+    Get.put(SplashController());
     return Scaffold(
       body: Center(
         child: Column(
@@ -18,9 +18,9 @@ class SplashView extends StatelessWidget {
               imageUrl:
                   "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
             ),
-            ElevatedButton(
-              onPressed: controller.passSecurity,
-              child: const Text("Geç"),
+            const SizedBox(height: 10),
+            const CircularProgressIndicator(
+              color: Colors.black,
             ),
           ],
         ),

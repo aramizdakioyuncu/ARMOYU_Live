@@ -19,6 +19,7 @@ class Bottomusermenu {
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         subtitle: Text(

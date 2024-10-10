@@ -1,35 +1,18 @@
-import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
-import 'package:armoyu_desktop/app/data/models/media_model.dart';
-import 'package:armoyu_desktop/app/data/models/room_model.dart';
+import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:armoyu_desktop/app/widgets/bottomusermenu.dart';
 import 'package:armoyu_desktop/app/widgets/message_sendfield.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
-class Group {
-  final int groupID;
-  final String name;
-  final String description;
-  final Media logo;
-  final List<Groupmember> groupmembers;
-  final List<Room> rooms;
+class GroupView extends StatelessWidget {
+  final Group group;
 
-  Group({
-    required this.groupID,
-    required this.name,
-    required this.description,
-    required this.logo,
-    required this.groupmembers,
-    required this.rooms,
-  });
-
-  Widget pageDetail(BuildContext context) {
+  const GroupView(this.group, {super.key});
+  @override
+  Widget build(BuildContext context) {
     final mainScrollController = ScrollController();
     final membersScrollController = ScrollController();
-    var showMembers = false.obs;
-
     return Row(
       children: [
         Container(
@@ -40,7 +23,7 @@ class Group {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: ListTile(
-                  title: Text(name),
+                  title: Text(group.name),
                   trailing: const Icon(Icons.sensor_occupied_rounded),
                 ),
               ),
@@ -49,7 +32,7 @@ class Group {
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     image: CachedNetworkImageProvider(
-                      logo.minUrl,
+                      group.logo.minUrl,
                     ),
                     fit: BoxFit.cover,
                   ),
@@ -73,9 +56,9 @@ class Group {
                 ),
               ),
               ...List.generate(
-                rooms.length,
+                group.rooms.length,
                 (index) {
-                  return rooms[index].roomfield();
+                  return group.rooms[index].roomfield();
                 },
               ),
               Padding(
@@ -138,18 +121,10 @@ class Group {
                       Icons.push_pin_rounded,
                     ),
                   ),
-                  Obx(
-                    () => IconButton(
-                      isSelected: true,
-                      onPressed: () {
-                        showMembers.value = !showMembers.value;
-                      },
-                      icon: Icon(
-                        Icons.group,
-                        color: showMembers.value == true
-                            ? Colors.white
-                            : Colors.grey,
-                      ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.group,
                     ),
                   ),
                   const SizedBox(
@@ -209,9 +184,10 @@ class Group {
                                 trackVisibility: true,
                                 child: ListView.builder(
                                   controller: mainScrollController,
-                                  itemCount: rooms[0].message!.length,
+                                  itemCount: group.rooms[0].message!.length,
                                   itemBuilder: (context, index) {
-                                    return rooms[0].message![index].chatfield();
+                                    return group.rooms[0].message![index]
+                                        .chatfield();
                                   },
                                 ),
                               ),
@@ -221,29 +197,23 @@ class Group {
                         ),
                       ),
                     ),
-                    Obx(
-                      () => Visibility(
-                        visible: showMembers.value,
-                        child: Container(
-                          color: const Color.fromARGB(255, 21, 21, 21),
-                          width: 200,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: RawScrollbar(
-                              controller: membersScrollController,
-                              thickness: 5,
-                              scrollbarOrientation: ScrollbarOrientation.right,
-                              radius: const Radius.circular(5),
-                              child: ListView.builder(
-                                controller: membersScrollController,
-                                itemCount:
-                                    AppList.groups[0].groupmembers.length,
-                                itemBuilder: (context, index) {
-                                  return AppList.groups[0].groupmembers[index]
-                                      .listtile();
-                                },
-                              ),
-                            ),
+                    Container(
+                      color: const Color.fromARGB(255, 21, 21, 21),
+                      width: 200,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: RawScrollbar(
+                          controller: membersScrollController,
+                          thickness: 5,
+                          scrollbarOrientation: ScrollbarOrientation.right,
+                          radius: const Radius.circular(5),
+                          child: ListView.builder(
+                            controller: membersScrollController,
+                            itemCount: AppList.groups[0].groupmembers.length,
+                            itemBuilder: (context, index) {
+                              return AppList.groups[0].groupmembers[index]
+                                  .listtile();
+                            },
                           ),
                         ),
                       ),

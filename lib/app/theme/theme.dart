@@ -59,15 +59,20 @@ final ThemeData appThemeData = ThemeData(
     ),
   ),
   dividerTheme: const DividerThemeData(
-    color: Colors.black,
-    thickness: 3,
+    color: Colors.grey,
+    thickness: 1,
   ),
-  listTileTheme: const ListTileThemeData(
+  listTileTheme: ListTileThemeData(
     minTileHeight: 0,
-    contentPadding: EdgeInsets.all(0),
-    textColor: Colors.white,
-    iconColor: Colors.white,
-    leadingAndTrailingTextStyle: TextStyle(
+    contentPadding: const EdgeInsets.all(2),
+    selectedColor: Colors.amber,
+    selectedTileColor: Colors.grey.shade800,
+    textColor: Colors.grey,
+    iconColor: Colors.grey,
+    subtitleTextStyle: const TextStyle(
+      color: Colors.grey,
+    ),
+    leadingAndTrailingTextStyle: const TextStyle(
       color: Colors.white38,
     ),
   ),
