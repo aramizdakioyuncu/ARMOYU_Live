@@ -27,6 +27,82 @@ class Group {
     required this.rooms,
   });
 
+  // JSON'dan Group nesnesi oluşturma
+  factory Group.fromJson(Map<String, dynamic> json) {
+    return Group(
+      groupID: json['groupID'],
+      name: json['name'],
+      description: json['description'],
+      logo: Media.fromJson(
+          json['logo']), // Media sınıfınızın da fromJson metodu olmalı
+      groupmembers: (json['groupmembers'] as List<dynamic>?)
+          ?.map((member) => Groupmember.fromJson(member))
+          .toList()
+          .obs, // RxList dönüşümü
+      rooms: (json['rooms'] as List<dynamic>)
+          .map((room) => Room.fromJson(room))
+          .toList()
+          .obs, // RxList dönüşümü
+    );
+  }
+
+  // Group nesnesini JSON'a dönüştürme
+  Map<String, dynamic> toJson() {
+    return {
+      'groupID': groupID,
+      'name': name,
+      'description': description,
+      'logo': logo.toJson(), // Media sınıfınızın toJson metodu olmalı
+      'groupmembers': groupmembers?.map((member) => member.toJson()).toList(),
+      'rooms': rooms.map((room) => room.toJson()).toList(),
+    };
+  }
+
+  void _showAlertDialog(BuildContext context, SocketioController socketio) {
+    var textController = TextEditingController().obs;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Oda Yarat'),
+          content: const Text('Bu bir alert dialog örneğidir.'),
+          actions: <Widget>[
+            TextField(
+              controller: textController.value,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                TextButton(
+                  child: const Text('Kapat'),
+                  onPressed: () {
+                    Get.back();
+                  },
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  child: const Text('Oluştur'),
+                  onPressed: () {
+                    Get.back();
+                    socketio.roomlist.value!.add(
+                      Room(
+                        group: this,
+                        name: textController.value.text,
+                        limit: 10,
+                        type: RoomType.voice,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget pageDetail(BuildContext context) {
     final mainScrollController = ScrollController();
     final membersScrollController = ScrollController();
@@ -36,6 +112,8 @@ class Group {
         tag: AppList.sessions.first.currentUser.id.toString());
 
     socketio.userList.value = [];
+
+    socketio.roomlist.value = rooms;
 
     return Row(
       children: [
@@ -48,54 +126,61 @@ class Group {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: ListTile(
                   title: Text(name),
-                  trailing: const Icon(Icons.sensor_occupied_rounded),
+                  onTap: () {},
+                  trailing: const Icon(Icons.settings),
                 ),
               ),
               Expanded(
-                child: ListView(
-                  children: [
-                    Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: CachedNetworkImageProvider(
-                            logo.minUrl,
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      child: const Column(
-                        children: [
-                          Spacer(),
-                          Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text("1.Seviye"),
+                child: GestureDetector(
+                  onTap: () {
+                    _showAlertDialog(context, socketio);
+                  },
+                  child: Obx(
+                    () => ListView(
+                      children: [
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: CachedNetworkImageProvider(
+                                logo.minUrl,
+                              ),
+                              fit: BoxFit.cover,
                             ),
                           ),
-                          LinearProgressIndicator(
-                            value: 0.2,
-                            backgroundColor: Colors.black38,
-                            color: Colors.red,
+                          child: const Column(
+                            children: [
+                              Spacer(),
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text("1.Seviye"),
+                                ),
+                              ),
+                              LinearProgressIndicator(
+                                value: 0.2,
+                                backgroundColor: Colors.black38,
+                                color: Colors.red,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        ...List.generate(
+                          socketio.roomlist.value!.length,
+                          (index) {
+                            return Obx(
+                              () => socketio.roomlist.value![index]
+                                  .roomfield(this),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    ...List.generate(
-                      rooms.length,
-                      (index) {
-                        return Obx(
-                          () => rooms[index].roomfield(this),
-                        );
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              Bottomusermenu.field(
-                AppList.sessions.first.currentUser,
-              ),
+              Bottomusermenu.field(AppList.sessions.first.currentUser),
             ],
           ),
         ),
@@ -297,8 +382,10 @@ class Group {
                                 controller: membersScrollController,
                                 itemCount: socketio.userList.value!.length,
                                 itemBuilder: (context, index) {
-                                  return socketio.userList.value![index]
-                                      .listtile();
+                                  return Obx(
+                                    () => socketio.userList.value![index]
+                                        .listtile(),
+                                  );
                                 },
                               ),
                             ),

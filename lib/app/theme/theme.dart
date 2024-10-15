@@ -32,11 +32,20 @@ final ThemeData appThemeData = ThemeData(
     backgroundColor: Color(0xFF3C4CBD),
     contentTextStyle: TextStyle(
       color: Colors.white,
-    ), // SnackBar metin rengi
+    ),
     actionTextColor: Colors.yellow, //
   ),
+  dialogTheme: DialogTheme(
+      backgroundColor: Colors.grey.shade900,
+      titleTextStyle: const TextStyle(color: Colors.white)),
   drawerTheme: const DrawerThemeData(
     backgroundColor: Colors.white,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    hintStyle: const TextStyle(color: Colors.grey),
+    border: InputBorder.none,
+    fillColor: Colors.grey.shade800,
+    filled: true,
   ),
   textTheme: const TextTheme(
     titleLarge: TextStyle(

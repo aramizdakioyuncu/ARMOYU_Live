@@ -1,10 +1,8 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/media_model.dart';
-import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/session_model.dart';
 import 'package:armoyu_desktop/app/data/models/settingslist_model.dart';
-import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/modules/settings/accounts/views/settings_account_view.dart';
 import 'package:armoyu_desktop/app/modules/settings/security/views/security_view.dart';
 import 'package:get/get.dart';
@@ -130,18 +128,7 @@ class AppList {
       ),
       name: "Gruplarsa",
       description: "masdçdçaks",
-      rooms: <Room>[
-        Room(
-          name: "Sesli Oda",
-          limit: 1,
-          type: RoomType.voice,
-        ),
-        Room(
-          name: "chat",
-          limit: 1,
-          type: RoomType.text,
-        ),
-      ].obs,
+      rooms: <Room>[].obs,
     ),
     Group(
       groupID: 1,
@@ -158,107 +145,7 @@ class AppList {
       ),
       name: "Gta V Online",
       description: "masdçdçaks",
-      rooms: [
-        Room(
-          name: "Sesli Oda",
-          limit: 1,
-          type: RoomType.voice,
-          message: [
-            Message(
-              user: User(
-                displayname: "SirEscanor ",
-                avatar: Media(
-                  id: 2,
-                  type: MediaType.image,
-                  bigUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  normalUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  minUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  isLocal: false,
-                ),
-              ),
-              message: "Gta dan anlayan var mı",
-              datetime: DateTime(2024, 10, 09),
-            ),
-            Message(
-              user: User(
-                displayname: "Engin Kuşko",
-                avatar: Media(
-                  id: 1,
-                  type: MediaType.image,
-                  bigUrl:
-                      "https://aramizdakioyuncu.com/galeri/profilresimleri/10915profilresimufaklik1714429566.jpg",
-                  normalUrl:
-                      "https://aramizdakioyuncu.com/galeri/profilresimleri/10915profilresimufaklik1714429566.jpg",
-                  minUrl:
-                      "https://aramizdakioyuncu.com/galeri/profilresimleri/10915profilresimufaklik1714429566.jpg",
-                  isLocal: false,
-                ),
-              ),
-              message: "alllls",
-              media: [
-                Media(
-                  id: 1,
-                  type: MediaType.image,
-                  bigUrl: "bigUrl",
-                  normalUrl: "normalUrl",
-                  minUrl: "minUrl",
-                  isLocal: false,
-                )
-              ],
-              datetime: DateTime(2024, 10, 09),
-            ),
-            Message(
-              user: User(
-                displayname: "SirEscanor ",
-                avatar: Media(
-                  id: 2,
-                  type: MediaType.image,
-                  bigUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  normalUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  minUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  isLocal: false,
-                ),
-              ),
-              message: "la",
-              datetime: DateTime(2024, 10, 09),
-            ),
-            Message(
-              user: User(
-                displayname: "SirEscanor ",
-                avatar: Media(
-                  id: 2,
-                  type: MediaType.image,
-                  bigUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  normalUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  minUrl:
-                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH-F_IUA74KH0J4nq228jqYfMBuBh4NFO1AA&s",
-                  isLocal: false,
-                ),
-              ),
-              message: "ka",
-              datetime: DateTime(2024, 10, 09),
-            ),
-          ],
-        ),
-        Room(
-          name: "Sohbet odası",
-          limit: 1,
-          type: RoomType.voice,
-        ),
-        Room(
-          name: "chat",
-          limit: 1,
-          type: RoomType.text,
-        ),
-      ].obs,
+      rooms: <Room>[].obs,
     ),
   ];
 }

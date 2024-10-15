@@ -23,16 +23,18 @@ class Bottomusermenu {
                   children: [
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.signal_cellular_alt,
                           color: Colors.green,
                         ),
-                        Text(
-                          "Bağlantı Kuruldu",
-                          style: TextStyle(
-                            color: Colors.green,
+                        Obx(
+                          () => Text(
+                            "Bağlantı Kuruldu(${socketio.pingValue.value})",
+                            style: const TextStyle(
+                              color: Colors.green,
+                            ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     Obx(
@@ -40,7 +42,7 @@ class Bottomusermenu {
                           ? Container()
                           : Text(
                               "Sunucu/${socketio.selectedRoom.value!.name}",
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.grey,
                               ),
                               textAlign: TextAlign.start,
@@ -49,15 +51,41 @@ class Bottomusermenu {
                   ],
                 ),
                 const Spacer(),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.info_outlined),
-                  iconSize: 18,
+                InkWell(
+                  onTap: () {},
+                  borderRadius: BorderRadius.circular(30),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.info_outlined,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.call_end),
-                  iconSize: 18,
+                InkWell(
+                  onTap: () {
+                    // Roomlist içindeki odalardan, currentMembers içinde mevcut kullanıcıyı sil
+                    // Oda listesindeki her odayı dolaşalım
+                    for (var room in socketio.roomlist.value!) {
+                      // Kullanıcının currentMembers listesinde olup olmadığını kontrol et
+                      room.currentMembers.removeWhere(
+                        (member) => member.username == user.username,
+                      );
+                    }
+
+                    socketio.changeroom(null);
+                    socketio.selectedRoom.value = null;
+                  },
+                  borderRadius: BorderRadius.circular(30),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.call_end,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -87,27 +115,54 @@ class Bottomusermenu {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  InkWell(
-                    onTap: () {},
-                    borderRadius: BorderRadius.circular(30),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4.0),
-                      child: Icon(
-                        Icons.mic,
-                        size: 20,
-                        color: Colors.grey,
+                  Obx(
+                    () => InkWell(
+                      onTap: () {
+                        var speaker = user.speaker;
+                        var mic = user.microphone;
+                        mic.value = !mic.value;
+
+                        if (mic.value == true && speaker.value == false) {
+                          speaker.value = true;
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(30),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Icon(
+                          user.microphone.value == true
+                              ? Icons.mic
+                              : Icons.mic_off_rounded,
+                          size: 20,
+                          color: user.microphone.value == true
+                              ? Colors.grey
+                              : Colors.red,
+                        ),
                       ),
                     ),
                   ),
-                  InkWell(
-                    onTap: () {},
-                    borderRadius: BorderRadius.circular(30),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4.0),
-                      child: Icon(
-                        Icons.headphones,
-                        size: 20,
-                        color: Colors.grey,
+                  Obx(
+                    () => InkWell(
+                      onTap: () {
+                        var speaker = user.speaker;
+                        var mic = user.microphone;
+
+                        speaker.value = !speaker.value;
+
+                        mic.value = speaker.value;
+                      },
+                      borderRadius: BorderRadius.circular(30),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Icon(
+                          user.speaker.value == true
+                              ? Icons.headphones
+                              : Icons.headset_off,
+                          size: 20,
+                          color: user.speaker.value == true
+                              ? Colors.grey
+                              : Colors.red,
+                        ),
                       ),
                     ),
                   ),

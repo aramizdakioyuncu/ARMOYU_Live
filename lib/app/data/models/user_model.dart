@@ -3,6 +3,7 @@ import 'media_model.dart'; // Media modelini uygun dosyadan import edin
 
 class User {
   int? id;
+
   String? firstname;
   String? lastname;
   String? username;
@@ -45,6 +46,7 @@ class User {
       'id': id,
       'firstname': firstname,
       'lastname': lastname,
+      'username': username,
       'displayname': displayname,
       'email': email,
       'phonenumber': phonenumber,
