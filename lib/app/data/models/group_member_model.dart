@@ -15,8 +15,9 @@ class Groupmember {
   Widget listtile() {
     return ListTile(
       leading: CircleAvatar(
-        foregroundImage:
-            CachedNetworkImageProvider(user.avatar!.minUrl.toString()),
+        foregroundImage: CachedNetworkImageProvider(
+          user.avatar!.minUrl.toString(),
+        ),
       ),
       title: Text(
         user.displayname.toString(),

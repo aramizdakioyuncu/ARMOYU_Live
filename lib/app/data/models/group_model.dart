@@ -1,6 +1,7 @@
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
 import 'package:armoyu_desktop/app/data/models/media_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
+import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:armoyu_desktop/app/widgets/bottomusermenu.dart';
 import 'package:armoyu_desktop/app/widgets/message_sendfield.dart';
@@ -13,15 +14,16 @@ class Group {
   final String name;
   final String description;
   final Media logo;
-  final List<Groupmember> groupmembers;
-  final List<Room> rooms;
+  RxList<Groupmember>? groupmembers;
+
+  RxList<Room> rooms;
 
   Group({
     required this.groupID,
     required this.name,
     required this.description,
     required this.logo,
-    required this.groupmembers,
+    this.groupmembers,
     required this.rooms,
   });
 
@@ -29,6 +31,11 @@ class Group {
     final mainScrollController = ScrollController();
     final membersScrollController = ScrollController();
     var showMembers = false.obs;
+
+    final socketio = Get.put(SocketioController(),
+        tag: AppList.sessions.first.currentUser.id.toString());
+
+    socketio.userList.value = [];
 
     return Row(
       children: [
@@ -44,70 +51,51 @@ class Group {
                   trailing: const Icon(Icons.sensor_occupied_rounded),
                 ),
               ),
-              Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: CachedNetworkImageProvider(
-                      logo.minUrl,
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: const Column(
+              Expanded(
+                child: ListView(
                   children: [
-                    Spacer(),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text("1.Seviye"),
+                    Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: CachedNetworkImageProvider(
+                            logo.minUrl,
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: const Column(
+                        children: [
+                          Spacer(),
+                          Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text("1.Seviye"),
+                            ),
+                          ),
+                          LinearProgressIndicator(
+                            value: 0.2,
+                            backgroundColor: Colors.black38,
+                            color: Colors.red,
+                          ),
+                        ],
                       ),
                     ),
-                    LinearProgressIndicator(
-                      value: 0.2,
-                      backgroundColor: Colors.black38,
-                      color: Colors.red,
+                    ...List.generate(
+                      rooms.length,
+                      (index) {
+                        return Obx(
+                          () => rooms[index].roomfield(this),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
-              ...List.generate(
-                rooms.length,
-                (index) {
-                  return rooms[index].roomfield();
-                },
+              Bottomusermenu.field(
+                AppList.sessions.first.currentUser,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: ExpansionTile(
-                  title: const Text(
-                    "Voice Channels",
-                    style: TextStyle(
-                      fontSize: 14,
-                    ),
-                  ),
-                  children: [
-                    ListTile(
-                      onTap: () {},
-                      leading: const Icon(Icons.keyboard_voice_sharp),
-                      title: const Text("sesli sohbet ODASI"),
-                    ),
-                    ListTile(
-                      onTap: () {},
-                      leading: const Icon(Icons.keyboard_voice_sharp),
-                      title: const Text("sesli sohbet  2"),
-                    ),
-                    ListTile(
-                      onTap: () {},
-                      leading: const Icon(Icons.keyboard_voice_sharp),
-                      title: const Text("sesli sohbet ODASI"),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Bottomusermenu.field(AppList.sessions[0].currentUser),
             ],
           ),
         ),
@@ -116,15 +104,25 @@ class Group {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.tag,
-                    color: Colors.grey,
-                    size: 25,
+                  Obx(
+                    () => socketio.selectedRoom.value == null
+                        ? Container()
+                        : Icon(
+                            socketio.selectedRoom.value!.type == RoomType.text
+                                ? Icons.tag
+                                : Icons.volume_up,
+                            color: Colors.grey,
+                            size: 25,
+                          ),
                   ),
-                  const SizedBox(
-                    width: 5,
+                  const SizedBox(width: 5),
+                  Obx(
+                    () => Text(
+                      socketio.selectedRoom.value == null
+                          ? name
+                          : socketio.selectedRoom.value!.name.toString(),
+                    ),
                   ),
-                  const Text("yazılı metinodası"),
                   const Spacer(),
                   IconButton(
                     onPressed: () {},
@@ -158,7 +156,7 @@ class Group {
                       style: TextStyle(fontSize: 11),
                       decoration: InputDecoration(
                         contentPadding: EdgeInsets.all(0),
-                        hintText: "Search",
+                        hintText: "Arama",
                         hintStyle: TextStyle(
                           fontSize: 11,
                           color: Colors.grey,
@@ -200,23 +198,84 @@ class Group {
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
                           children: [
-                            Expanded(
-                              child: RawScrollbar(
-                                thickness: 10,
-                                controller: mainScrollController,
-                                radius: const Radius.circular(5),
-                                thumbVisibility: true,
-                                trackVisibility: true,
-                                child: ListView.builder(
-                                  controller: mainScrollController,
-                                  itemCount: rooms[0].message!.length,
-                                  itemBuilder: (context, index) {
-                                    return rooms[0].message![index].chatfield();
-                                  },
-                                ),
-                              ),
+                            Obx(
+                              () => socketio.chatlist.value == null
+                                  ? Container()
+                                  : Expanded(
+                                      child: Stack(
+                                        children: [
+                                          RawScrollbar(
+                                            thickness: 10,
+                                            controller: mainScrollController,
+                                            radius: const Radius.circular(5),
+                                            thumbVisibility: true,
+                                            trackVisibility: true,
+                                            child: ListView.builder(
+                                              reverse: true,
+                                              controller: mainScrollController,
+                                              itemCount: socketio
+                                                  .chatlist.value!.length,
+                                              itemBuilder: (context, index) {
+                                                return socketio
+                                                    .chatlist
+                                                    .value![socketio.chatlist
+                                                            .value!.length -
+                                                        index -
+                                                        1]
+                                                    .chatfield();
+                                              },
+                                            ),
+                                          ),
+                                          Obx(
+                                            () => socketio.socketChatStatus
+                                                        .value ==
+                                                    true
+                                                ? Container()
+                                                : Align(
+                                                    alignment:
+                                                        AlignmentDirectional
+                                                            .bottomCenter,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              8.0),
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(5),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors
+                                                              .grey.shade800,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                            5,
+                                                          ),
+                                                        ),
+                                                        child: const Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Text(
+                                                              "İnternet Bağlantısı Zayıf",
+                                                            ),
+                                                            Icon(
+                                                              Icons
+                                                                  .signal_cellular_connected_no_internet_0_bar_rounded,
+                                                              color: Colors.red,
+                                                            )
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                          )
+                                        ],
+                                      ),
+                                    ),
                             ),
-                            MessageSendfield.field1(),
+                            Obx(() => MessageSendfield.field1(this)),
                           ],
                         ),
                       ),
@@ -236,10 +295,9 @@ class Group {
                               radius: const Radius.circular(5),
                               child: ListView.builder(
                                 controller: membersScrollController,
-                                itemCount:
-                                    AppList.groups[0].groupmembers.length,
+                                itemCount: socketio.userList.value!.length,
                                 itemBuilder: (context, index) {
-                                  return AppList.groups[0].groupmembers[index]
+                                  return socketio.userList.value![index]
                                       .listtile();
                                 },
                               ),

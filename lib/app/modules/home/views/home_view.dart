@@ -131,6 +131,7 @@ class HomeView extends StatelessWidget {
           Expanded(
             child: PageView(
               controller: pageController,
+              physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (value) {
                 selectedPage.value = value;
               },

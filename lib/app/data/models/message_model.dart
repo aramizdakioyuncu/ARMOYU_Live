@@ -2,33 +2,63 @@ import 'package:armoyu_desktop/app/data/models/media_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class Message {
-  final User user;
-  final String message;
-  final List<Media>? media;
-  final DateTime datetime;
+  final Rx<User> user; // User'ı reaktif hale getir
+  final RxString message; // Mesajı reaktif hale getir
+  final RxList<Media>? media; // Medya listesini opsiyonel reaktif hale getir
+  final Rx<DateTime> datetime; // Tarihi reaktif hale getir
 
   Message({
-    required this.user,
-    required this.message,
-    this.media,
-    required this.datetime,
-  });
+    required User user,
+    required String message,
+    List<Media>? media, // Medya opsiyonel
+    required DateTime datetime,
+  })  : user = Rx(user),
+        message = RxString(message),
+        media = media != null ? RxList<Media>(media) : null, // Null kontrolü
+        datetime = Rx<DateTime>(datetime);
+
+  // Message nesnesini JSON'a dönüştürmek için bir yöntem
+  Map<String, dynamic> toJson() {
+    return {
+      'user': user.value.toJson(), // User nesnesini JSON'a dönüştür
+      'message': message.value,
+      'media': media
+          ?.map((m) => m.toJson())
+          .toList(), // Media listesini JSON'a dönüştür, null kontrolü
+      'datetime': datetime.value
+          .toIso8601String(), // DateTime'ı ISO 8601 formatında string'e dönüştür
+    };
+  }
+
+  // JSON'dan Message nesnesi oluşturmak için bir yöntem
+  factory Message.fromJson(Map<String, dynamic> json) {
+    return Message(
+      user: User.fromJson(json['user']), // User nesnesini JSON'dan oluştur
+      message: json['message'],
+      media: json['media'] != null
+          ? List<Media>.from(json['media'].map((m) => Media.fromJson(m)))
+          : null, // Media listesini JSON'dan oluştur
+      datetime: DateTime.parse(
+          json['datetime']), // ISO 8601 string'ini DateTime'a çevir
+    );
+  }
 
   Widget chatfield() {
     return ListTile(
       leading: CircleAvatar(
         foregroundImage: CachedNetworkImageProvider(
-          user.avatar!.minUrl.toString(),
+          user.value.avatar!.minUrl.toString(),
         ),
       ),
       title: Text(
-        user.displayname.toString(),
+        user.value.displayname.toString(),
       ),
       subtitle: Column(
         children: [
-          Align(alignment: Alignment.bottomLeft, child: Text(message)),
+          Align(alignment: Alignment.bottomLeft, child: Text(message.value)),
           media == null
               ? Container()
               : Container(
