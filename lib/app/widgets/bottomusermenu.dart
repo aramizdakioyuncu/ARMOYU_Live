@@ -1,6 +1,8 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
+import 'package:armoyu_desktop/app/modules/webrtc/views/device_view.dart';
+import 'package:armoyu_desktop/app/modules/webrtc/views/media_views.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,6 +17,49 @@ class Bottomusermenu {
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        Get.context!,
+                        MaterialPageRoute(
+                          builder: (context) => GetDisplayMediaSample(),
+                        ),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.videocam_rounded,
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        Get.context!,
+                        MaterialPageRoute(
+                          builder: (context) => DeviceEnumerationSample(),
+                        ),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.screen_share_rounded,
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () {},
+                    child: const Icon(
+                      Icons.speed,
+                    ),
+                  ),
+                  const Spacer(),
+                ],
+              ),
+            ),
             Row(
               children: [
                 Column(
@@ -120,16 +165,6 @@ class Bottomusermenu {
                         }
 
                         socketio.userUpdate(user);
-                        if (socketio.isInRoomanyWhereGroup()) {
-                          var userdetail2 = socketio
-                              .findmyRoomanyWhereGroup()!
-                              .currentMembers
-                              .firstWhere(
-                                (element) => element.username == user.username,
-                              );
-
-                          userdetail2 = user;
-                        }
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(
@@ -157,17 +192,6 @@ class Bottomusermenu {
                         mic.value = speaker.value;
 
                         socketio.userUpdate(user);
-
-                        if (socketio.isInRoomanyWhereGroup()) {
-                          var userdetail2 = socketio
-                              .findmyRoomanyWhereGroup()!
-                              .currentMembers
-                              .firstWhere(
-                                (element) => element.username == user.username,
-                              );
-
-                          userdetail2 = user;
-                        }
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(

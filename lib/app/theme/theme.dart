@@ -17,8 +17,13 @@ final ThemeData appThemeData = ThemeData(
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: WidgetStateProperty.all(const Color(0xFF3C4CBD)),
+      backgroundColor: WidgetStateProperty.all(Colors.black26),
       foregroundColor: WidgetStateProperty.all(Colors.white),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.0), // Kenar yuvarlama
+        ),
+      ),
     ),
   ),
   buttonTheme: const ButtonThemeData(

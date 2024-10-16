@@ -8,6 +8,7 @@ import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -24,6 +25,11 @@ class SocketioController extends GetxController {
   var pingValue = 0.obs; // Ping değerini reaktif hale getirdik
   DateTime? lastPingTime; // Son ping zamanı
   String socketPREFIX = "||SOCKET|| -> ";
+
+  //Sesss değişkenleri
+
+  MediaStream? localStream;
+  late RTCPeerConnection peerConnection;
 
   void createRoom(Room room, Group userCurrentgroup) {
     Get.back();
@@ -161,7 +167,6 @@ class SocketioController extends GetxController {
         return;
       }
 
-      log("PING ID eşleşti");
       DateTime pongReceivedTime = DateTime.now(); // Pong zamanı
       if (lastPingTime != null) {
         // Ping süresini hesapla
@@ -171,6 +176,12 @@ class SocketioController extends GetxController {
         log('Ping süresi: ${pingValue.value} ms');
       }
     });
+
+    socket.on('signaling', (data) {
+      // Signaling verilerini dinleme
+      print('Signaling verisi alındı: $data');
+    });
+
     // Başka biri bağlandığında bildiri al
     socket.on('userConnected', (data) {
       if (data != null) {
@@ -464,4 +475,46 @@ class SocketioController extends GetxController {
       userListTimer = null;
     }
   }
+
+  //////////Sesssss/////
+  ///
+  ///
+  ///
+  ///
+  //
+
+  // void initWebRTC() async {
+  //   // MediaStream oluşturma
+  //   localStream = await navigator.mediaDevices.getUserMedia({
+  //     'audio': true,
+  //   });
+
+  //   // PeerConnection ayarları
+  //   final configuration = {
+  //     'iceServers': [
+  //       {'urls': 'stun:stun.l.google.com:19302'},
+  //     ]
+  //   };
+
+  //   peerConnection = await createPeerConnection(configuration);
+
+  //   // Yerel akışı peerConnection'a ekle
+  //   peerConnection.addStream(localStream!);
+
+  //   // ICE adaylarını gönder
+  //   peerConnection.onIceCandidate = (RTCIceCandidate candidate) {
+  //     socket.emit('signal', {
+  //       'signal': {
+  //         'candidate': candidate.toMap(),
+  //         'type': 'candidate',
+  //       },
+  //       'room': 'room1',
+  //     });
+  //   };
+
+  //   peerConnection.onAddStream = (MediaStream stream) {
+  //     // Uzak akışı işleme
+  //     print('Uzak akış alındı');
+  //   };
+  // }
 }
