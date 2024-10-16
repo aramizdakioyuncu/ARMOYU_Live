@@ -191,6 +191,7 @@ class Group {
             children: [
               Row(
                 children: [
+                  const SizedBox(width: 5),
                   Obx(
                     () => socketio.isInRoom(this) != true
                         ? Container()
@@ -241,16 +242,15 @@ class Group {
                   ),
                   const SizedBox(
                     width: 100,
+                    height: 28,
                     child: TextField(
                       style: TextStyle(fontSize: 11),
                       decoration: InputDecoration(
-                        contentPadding: EdgeInsets.all(0),
                         hintText: "Arama",
                         hintStyle: TextStyle(
                           fontSize: 11,
                           color: Colors.grey,
                         ),
-                        border: InputBorder.none,
                       ),
                     ),
                   ),

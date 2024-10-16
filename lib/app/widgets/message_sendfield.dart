@@ -16,7 +16,7 @@ class MessageSendfield {
       child: Container(
         height: 45,
         decoration: BoxDecoration(
-          color: Colors.black45,
+          color: const Color.fromARGB(255, 24, 24, 24),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(

@@ -118,6 +118,18 @@ class Bottomusermenu {
                         if (mic.value == true && speaker.value == false) {
                           speaker.value = true;
                         }
+
+                        socketio.userUpdate(user);
+                        if (socketio.isInRoomanyWhereGroup()) {
+                          var userdetail2 = socketio
+                              .findmyRoomanyWhereGroup()!
+                              .currentMembers
+                              .firstWhere(
+                                (element) => element.username == user.username,
+                              );
+
+                          userdetail2 = user;
+                        }
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(
@@ -143,6 +155,19 @@ class Bottomusermenu {
                         speaker.value = !speaker.value;
 
                         mic.value = speaker.value;
+
+                        socketio.userUpdate(user);
+
+                        if (socketio.isInRoomanyWhereGroup()) {
+                          var userdetail2 = socketio
+                              .findmyRoomanyWhereGroup()!
+                              .currentMembers
+                              .firstWhere(
+                                (element) => element.username == user.username,
+                              );
+
+                          userdetail2 = user;
+                        }
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(

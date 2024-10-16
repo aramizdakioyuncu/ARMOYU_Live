@@ -291,6 +291,7 @@ class SocketioController extends GetxController {
               if (userRoom != null) {
                 if (userRoom.groupID == groupfetch.groupID) {
                   a.user.value = userInfo;
+
                   a.currentRoom = userRoom.obs;
                 }
               } else {
@@ -425,10 +426,25 @@ class SocketioController extends GetxController {
   }
 
   void changeroom(Room? room) {
+    exitroom();
+
+    if (room != null) {
+      room.currentMembers.add(AppList.sessions.first.currentUser);
+    }
     try {
       log("oda değiştirildi");
 
       socket.emit('changeRoom', room?.toJson());
+    } catch (e) {
+      log("${socketPREFIX}Hata(changeRoom) $e");
+    }
+  }
+
+  void userUpdate(User user) {
+    try {
+      log("Bilgiler Güncellendi");
+
+      socket.emit('profileUpdate', user.toJson());
     } catch (e) {
       log("${socketPREFIX}Hata(changeRoom) $e");
     }

@@ -43,8 +43,11 @@ final ThemeData appThemeData = ThemeData(
   ),
   inputDecorationTheme: InputDecorationTheme(
     hintStyle: const TextStyle(color: Colors.grey),
-    border: InputBorder.none,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(20.0), // Kenar yumuşatma değeri
+    ),
     fillColor: Colors.grey.shade800,
+    contentPadding: const EdgeInsets.all(5),
     filled: true,
   ),
   textTheme: const TextTheme(
