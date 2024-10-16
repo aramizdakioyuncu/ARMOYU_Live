@@ -1,3 +1,4 @@
+import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,10 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class Bottomusermenu {
-  static Widget field(User user) {
-    final socketio = Get.find<SocketioController>(
-      tag: user.id.toString(),
-    );
+  static Widget field(User user, Group? group) {
+    var socketio = Get.find<SocketioController>();
 
     return Container(
       color: const Color.fromARGB(255, 24, 24, 24),
@@ -38,16 +37,17 @@ class Bottomusermenu {
                       ],
                     ),
                     Obx(
-                      () => socketio.selectedRoom.value == null
+                      () => socketio.isInRoomanyWhereGroup() != true
                           ? Container()
                           : Text(
-                              "Sunucu/${socketio.selectedRoom.value!.name}",
+                              // "${socketio.findanyWhereGroup().name}/",
+                              "${socketio.findanyWhereGroup().name}/${socketio.findmyRoomanyWhereGroup() == null ? "" : socketio.findmyRoomanyWhereGroup()!.name.toString()}",
                               style: const TextStyle(
                                 color: Colors.grey,
                               ),
                               textAlign: TextAlign.start,
                             ),
-                    )
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -65,17 +65,10 @@ class Bottomusermenu {
                 ),
                 InkWell(
                   onTap: () {
-                    // Roomlist içindeki odalardan, currentMembers içinde mevcut kullanıcıyı sil
-                    // Oda listesindeki her odayı dolaşalım
-                    for (var room in socketio.roomlist.value!) {
-                      // Kullanıcının currentMembers listesinde olup olmadığını kontrol et
-                      room.currentMembers.removeWhere(
-                        (member) => member.username == user.username,
-                      );
-                    }
+                    //Maksat daha hızlı olması yoksa socket üzerindende eklenecek
+                    socketio.exitroom();
 
                     socketio.changeroom(null);
-                    socketio.selectedRoom.value = null;
                   },
                   borderRadius: BorderRadius.circular(30),
                   child: const Padding(

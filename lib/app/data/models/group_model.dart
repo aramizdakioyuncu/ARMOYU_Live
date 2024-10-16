@@ -1,5 +1,6 @@
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
 import 'package:armoyu_desktop/app/data/models/media_model.dart';
+import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
@@ -15,8 +16,7 @@ class Group {
   final String description;
   final Media logo;
   RxList<Groupmember>? groupmembers;
-
-  RxList<Room> rooms;
+  RxList<Room>? rooms;
 
   Group({
     required this.groupID,
@@ -24,7 +24,7 @@ class Group {
     required this.description,
     required this.logo,
     this.groupmembers,
-    required this.rooms,
+    this.rooms,
   });
 
   // JSON'dan Group nesnesi oluşturma
@@ -39,10 +39,10 @@ class Group {
           ?.map((member) => Groupmember.fromJson(member))
           .toList()
           .obs, // RxList dönüşümü
-      rooms: (json['rooms'] as List<dynamic>)
-          .map((room) => Room.fromJson(room))
+      rooms: (json['rooms'] as List<dynamic>?)
+          ?.map((room) => Room.fromJson(room))
           .toList()
-          .obs, // RxList dönüşümü
+          .obs,
     );
   }
 
@@ -54,7 +54,7 @@ class Group {
       'description': description,
       'logo': logo.toJson(), // Media sınıfınızın toJson metodu olmalı
       'groupmembers': groupmembers?.map((member) => member.toJson()).toList(),
-      'rooms': rooms.map((room) => room.toJson()).toList(),
+      'rooms': rooms?.map((room) => room.toJson()).toList(),
     };
   }
 
@@ -66,7 +66,7 @@ class Group {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Oda Yarat'),
-          content: const Text('Bu bir alert dialog örneğidir.'),
+          content: const Text('Oluşturduğun oda anlık gözükür.'),
           actions: <Widget>[
             TextField(
               controller: textController.value,
@@ -84,14 +84,15 @@ class Group {
                 ElevatedButton(
                   child: const Text('Oluştur'),
                   onPressed: () {
-                    Get.back();
-                    socketio.roomlist.value!.add(
+                    socketio.createRoom(
                       Room(
-                        group: this,
+                        groupID: groupID,
                         name: textController.value.text,
                         limit: 10,
                         type: RoomType.voice,
+                        message: <Message>[].obs,
                       ),
+                      this,
                     );
                   },
                 ),
@@ -104,16 +105,13 @@ class Group {
   }
 
   Widget pageDetail(BuildContext context) {
-    final mainScrollController = ScrollController();
-    final membersScrollController = ScrollController();
+    var mainScrollController = ScrollController().obs;
+    var membersScrollController = ScrollController().obs;
     var showMembers = false.obs;
 
-    final socketio = Get.put(SocketioController(),
-        tag: AppList.sessions.first.currentUser.id.toString());
+    final socketio = Get.put(SocketioController());
 
-    socketio.userList.value = [];
-
-    socketio.roomlist.value = rooms;
+    var chattextcontroller = TextEditingController().obs;
 
     return Row(
       children: [
@@ -135,52 +133,56 @@ class Group {
                   onTap: () {
                     _showAlertDialog(context, socketio);
                   },
-                  child: Obx(
-                    () => ListView(
-                      children: [
-                        Container(
-                          height: 150,
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                logo.minUrl,
-                              ),
-                              fit: BoxFit.cover,
+                  child: ListView(
+                    children: [
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: CachedNetworkImageProvider(
+                              logo.minUrl,
                             ),
-                          ),
-                          child: const Column(
-                            children: [
-                              Spacer(),
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text("1.Seviye"),
-                                ),
-                              ),
-                              LinearProgressIndicator(
-                                value: 0.2,
-                                backgroundColor: Colors.black38,
-                                color: Colors.red,
-                              ),
-                            ],
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        ...List.generate(
-                          socketio.roomlist.value!.length,
-                          (index) {
-                            return Obx(
-                              () => socketio.roomlist.value![index]
-                                  .roomfield(this),
-                            );
-                          },
+                        child: const Column(
+                          children: [
+                            Spacer(),
+                            Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text("1.Seviye"),
+                              ),
+                            ),
+                            LinearProgressIndicator(
+                              value: 0.2,
+                              backgroundColor: Colors.black38,
+                              color: Colors.red,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Obx(
+                        () => Column(
+                          children: List.generate(
+                            socketio.findcurrentGroup(this).rooms!.length,
+                            (index) {
+                              return Obx(
+                                () => socketio
+                                    .findcurrentGroup(this)
+                                    .rooms![index]
+                                    .roomfield(this),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Bottomusermenu.field(AppList.sessions.first.currentUser),
+              Bottomusermenu.field(AppList.sessions.first.currentUser, this),
             ],
           ),
         ),
@@ -190,10 +192,10 @@ class Group {
               Row(
                 children: [
                   Obx(
-                    () => socketio.selectedRoom.value == null
+                    () => socketio.isInRoom(this) != true
                         ? Container()
                         : Icon(
-                            socketio.selectedRoom.value!.type == RoomType.text
+                            socketio.findmyRoom(this)!.type == RoomType.text
                                 ? Icons.tag
                                 : Icons.volume_up,
                             color: Colors.grey,
@@ -203,9 +205,11 @@ class Group {
                   const SizedBox(width: 5),
                   Obx(
                     () => Text(
-                      socketio.selectedRoom.value == null
+                      socketio.isInRoom(this) != true
+                          // socketio.selectedRoom.value == null
                           ? name
-                          : socketio.selectedRoom.value!.name.toString(),
+                          // : socketio.selectedRoom.value!.name.toString(),
+                          : socketio.findmyRoom(this)!.name.toString(),
                     ),
                   ),
                   const Spacer(),
@@ -284,27 +288,34 @@ class Group {
                         child: Column(
                           children: [
                             Obx(
-                              () => socketio.chatlist.value == null
-                                  ? Container()
-                                  : Expanded(
-                                      child: Stack(
+                              // () => socketio.chatlist.value == null
+                              () => Expanded(
+                                child: socketio.isInRoom(this) != true
+                                    ? Container()
+                                    : Stack(
                                         children: [
                                           RawScrollbar(
                                             thickness: 10,
-                                            controller: mainScrollController,
+                                            controller:
+                                                mainScrollController.value,
                                             radius: const Radius.circular(5),
                                             thumbVisibility: true,
                                             trackVisibility: true,
                                             child: ListView.builder(
                                               reverse: true,
-                                              controller: mainScrollController,
+                                              controller:
+                                                  mainScrollController.value,
                                               itemCount: socketio
-                                                  .chatlist.value!.length,
+                                                  .findmyRoom(this)!
+                                                  .message
+                                                  .length,
                                               itemBuilder: (context, index) {
                                                 return socketio
-                                                    .chatlist
-                                                    .value![socketio.chatlist
-                                                            .value!.length -
+                                                    .findmyRoom(this)!
+                                                    .message[socketio
+                                                            .findmyRoom(this)!
+                                                            .message
+                                                            .length -
                                                         index -
                                                         1]
                                                     .chatfield();
@@ -358,9 +369,16 @@ class Group {
                                           )
                                         ],
                                       ),
-                                    ),
+                              ),
                             ),
-                            Obx(() => MessageSendfield.field1(this)),
+                            Obx(
+                              () => socketio.isInRoom(this) != true
+                                  ? Container()
+                                  : MessageSendfield.field1(
+                                      this,
+                                      socketio.findmyRoomanyWhereGroup()!,
+                                      chattextcontroller),
+                            ),
                           ],
                         ),
                       ),
@@ -368,29 +386,38 @@ class Group {
                     Obx(
                       () => Visibility(
                         visible: showMembers.value,
-                        child: Container(
-                          color: const Color.fromARGB(255, 21, 21, 21),
-                          width: 200,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: RawScrollbar(
-                              controller: membersScrollController,
-                              thickness: 5,
-                              scrollbarOrientation: ScrollbarOrientation.right,
-                              radius: const Radius.circular(5),
-                              child: ListView.builder(
-                                controller: membersScrollController,
-                                itemCount: socketio.userList.value!.length,
-                                itemBuilder: (context, index) {
-                                  return Obx(
-                                    () => socketio.userList.value![index]
-                                        .listtile(),
-                                  );
-                                },
+                        child: socketio.findcurrentGroup(this).groupmembers ==
+                                null
+                            ? Container()
+                            : Container(
+                                color: const Color.fromARGB(255, 21, 21, 21),
+                                width: 200,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: RawScrollbar(
+                                    controller: membersScrollController.value,
+                                    thickness: 5,
+                                    scrollbarOrientation:
+                                        ScrollbarOrientation.right,
+                                    radius: const Radius.circular(5),
+                                    child: ListView.builder(
+                                      controller: membersScrollController.value,
+                                      itemCount: socketio
+                                          .findcurrentGroup(this)
+                                          .groupmembers!
+                                          .length,
+                                      itemBuilder: (context, index) {
+                                        return Obx(
+                                          () => socketio
+                                              .findcurrentGroup(this)
+                                              .groupmembers![index]
+                                              .listtile(),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                   ],

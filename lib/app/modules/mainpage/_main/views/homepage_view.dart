@@ -80,8 +80,7 @@ class HomepageView extends StatelessWidget {
                   ),
                   const Spacer(),
                   Bottomusermenu.field(
-                    AppList.sessions[0].currentUser,
-                  ),
+                      AppList.sessions.first.currentUser, null),
                 ],
               ),
             ),

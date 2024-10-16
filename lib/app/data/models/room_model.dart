@@ -8,52 +8,58 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class Room {
-  final Group group;
+  final int groupID;
   RxString name;
   RxInt limit;
   final RoomType type;
-  List<Message>? message;
+  RxList<Message> message;
   RxList<User> currentMembers = <User>[].obs;
 
   Room({
-    required this.group,
+    required this.groupID,
     required String name,
     required int limit,
     required this.type,
-    this.message,
+    List<Message>? message, // Null olabilen liste
   })  : name = name.obs,
-        limit = limit.obs;
+        limit = limit.obs,
+        message = (message ?? []).obs; // Eğer null ise boş bir liste atanır
 
-  // JSON'a dönüştürme
+  // Room nesnesini JSON'a çevirme
   Map<String, dynamic> toJson() {
     return {
-      'group': group,
-      'name': name.value,
-      'limit': limit.value,
-      'type': roomTypeToString(type), // RoomType'i string'e çeviriyoruz
-      'message': message?.map((msg) => msg.toJson()).toList(),
-      'currentMembers': currentMembers.map((user) => user.toJson()).toList(),
+      'groupID': groupID, // Group nesnesini JSON'a çevir
+      'name': name.value, // RxString'den değer al
+      'limit': limit.value, // RxInt'den değer al
+      'type': type.index, // Enum değerini indeks olarak kaydet
+      'message':
+          message.map((msg) => msg.toJson()).toList(), // Mesajları JSON'a çevir
+      'currentMembers': currentMembers
+          .map((member) => member.toJson())
+          .toList(), // Üyeleri JSON'a çevir
     };
   }
 
-  // JSON'dan nesne oluşturma
+  // JSON'dan Room nesnesini oluşturma
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
-      group: Group.fromJson(json['group']),
+      groupID: json['groupID'], // Group nesnesini JSON'dan oluştur
       name: json['name'],
       limit: json['limit'],
-      type: stringToRoomType(json['type']),
+      type: RoomType.values[json['type']], // RoomType'ı enum'dan almak için
       message: (json['message'] as List<dynamic>?)
-          ?.map((msg) => Message.fromJson(msg))
-          .toList(),
+              ?.map((msg) => Message.fromJson(msg))
+              .toList() // Mesajları JSON'dan oluştur
+              .obs ??
+          <Message>[].obs, // Null kontrolü ve varsayılan değer
     )..currentMembers.value = (json['currentMembers'] as List<dynamic>)
-        .map((user) => User.fromJson(user))
-        .toList();
+        .map((member) => User.fromJson(member))
+        .toList(); // Mevcut üyeleri JSON'dan oluştur
   }
 
   bool isUserInAnyRoom(User user) {
     return AppList.groups.any((group) {
-      return group.rooms.any((room) {
+      return group.rooms!.any((room) {
         return room.currentMembers
             .any((currentMember) => currentMember.id == user.id);
       });
@@ -62,7 +68,7 @@ class Room {
 
   void removeUserFromRooms(User user) {
     for (var group in AppList.groups) {
-      for (var room in group.rooms) {
+      for (var room in group.rooms!) {
         room.currentMembers.removeWhere(
             (currentMember) => currentMember.username == user.username);
       }
@@ -70,9 +76,7 @@ class Room {
   }
 
   Widget roomfield(Group group) {
-    final socketio = Get.find<SocketioController>(
-      tag: AppList.sessions.first.currentUser.id.toString(),
-    );
+    final socketio = Get.find<SocketioController>();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -80,13 +84,6 @@ class Room {
         children: [
           ListTile(
             onTap: () {
-              socketio.selectedRoom.value = this;
-
-              if (socketio.selectedRoom.value!.message == null) {
-                socketio.selectedRoom.value!.message = [];
-              }
-              socketio.chatlist.value = socketio.selectedRoom.value!.message!;
-
               socketio.changeroom(this);
             },
             leading: Icon(

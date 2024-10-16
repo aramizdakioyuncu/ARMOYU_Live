@@ -1,4 +1,5 @@
 import 'package:armoyu_desktop/app/data/models/media_model.dart';
+import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -9,16 +10,19 @@ class Message {
   final RxString message; // Mesajı reaktif hale getir
   final RxList<Media>? media; // Medya listesini opsiyonel reaktif hale getir
   final Rx<DateTime> datetime; // Tarihi reaktif hale getir
+  final Rx<Room> room; // Tarihi reaktif hale getir
 
   Message({
     required User user,
     required String message,
     List<Media>? media, // Medya opsiyonel
     required DateTime datetime,
+    required Room room,
   })  : user = Rx(user),
         message = RxString(message),
         media = media != null ? RxList<Media>(media) : null, // Null kontrolü
-        datetime = Rx<DateTime>(datetime);
+        datetime = Rx<DateTime>(datetime),
+        room = Rx<Room>(room);
 
   // Message nesnesini JSON'a dönüştürmek için bir yöntem
   Map<String, dynamic> toJson() {
@@ -30,6 +34,7 @@ class Message {
           .toList(), // Media listesini JSON'a dönüştür, null kontrolü
       'datetime': datetime.value
           .toIso8601String(), // DateTime'ı ISO 8601 formatında string'e dönüştür
+      'room': room.value.toJson(), // User nesnesini JSON'a dönüştür
     };
   }
 
@@ -43,6 +48,7 @@ class Message {
           : null, // Media listesini JSON'dan oluştur
       datetime: DateTime.parse(
           json['datetime']), // ISO 8601 string'ini DateTime'a çevir
+      room: Room.fromJson(json['room']),
     );
   }
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
+import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
@@ -11,10 +12,7 @@ import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketioController extends GetxController {
-  var selectedRoom = Rxn<Room>(null);
-  var roomlist = Rxn<List<Room>>(null);
-  var chatlist = Rxn<List<Message>>(null);
-  var userList = Rxn<List<Groupmember>>(null);
+  var groups = Rxn<List<Group>>(null);
 
   late IO.Socket socket;
   var socketChatStatus = false.obs;
@@ -26,9 +24,101 @@ class SocketioController extends GetxController {
   var pingValue = 0.obs; // Ping değerini reaktif hale getirdik
   DateTime? lastPingTime; // Son ping zamanı
   String socketPREFIX = "||SOCKET|| -> ";
+
+  void createRoom(Room room, Group userCurrentgroup) {
+    Get.back();
+    var currentgroup = findcurrentGroup(userCurrentgroup);
+
+    currentgroup.rooms ??= RxList<Room>();
+
+    currentgroup.rooms!.add(room);
+  }
+
+  bool isInRoom(Group userCurrentgroup) {
+    var currentgroup = findcurrentGroup(userCurrentgroup);
+
+    // Oda listesi null veya boş mu kontrol edin
+    if (currentgroup.rooms == null || currentgroup.rooms!.isEmpty) {
+      return false; // Oda yoksa false döner
+    }
+
+    return currentgroup.rooms!.any(
+      (element) => element.currentMembers.any(
+        (element2) =>
+            element2.username == AppList.sessions.first.currentUser.username,
+      ),
+    );
+  }
+
+  bool isInRoomanyWhereGroup() {
+    return groups.value!.any(
+      (element) => element.rooms!.any(
+        (element2) => element2.currentMembers.any(
+          (element3) =>
+              element3.username == AppList.sessions.first.currentUser.username,
+        ),
+      ),
+    );
+  }
+
+  Group findcurrentGroup(Group userCurrentgroup) {
+    return groups.value!.firstWhere(
+      (element) => element == userCurrentgroup,
+    );
+  }
+
+  Group findanyWhereGroup() {
+    return groups.value!.firstWhere(
+      (element) => element.rooms!.any(
+        (element2) => element2.currentMembers.any(
+          (element3) =>
+              element3.username == AppList.sessions.first.currentUser.username,
+        ),
+      ),
+    );
+  }
+
+  Room? findmyRoom(Group userCurrentgroup) {
+    var currentgroup = findcurrentGroup(userCurrentgroup);
+
+    if (isInRoom(userCurrentgroup) == true) {
+      return currentgroup.rooms!.firstWhere(
+        (element) => element.currentMembers.any(
+          (element2) =>
+              element2.username == AppList.sessions.first.currentUser.username,
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  Room? findmyRoomanyWhereGroup() {
+    if (isInRoomanyWhereGroup() == true) {
+      for (var group in groups.value!) {
+        try {
+          // Eğer kullanıcı bu grubun odalarından birindeyse o odayı döndür
+          var room = group.rooms!.firstWhere(
+            (room) => room.currentMembers.any(
+              (member) =>
+                  member.username ==
+                  AppList.sessions.first.currentUser.username,
+            ),
+          );
+          return room; // Kullanıcının bulunduğu odayı bulunca döndür
+        } catch (e) {
+          // Odalar arasında bulamazsa, döngü devam eder
+          continue;
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   void onInit() {
     super.onInit();
+    groups.value = AppList.groups;
     main();
   }
 
@@ -77,8 +167,8 @@ class SocketioController extends GetxController {
         // Ping süresini hesapla
         pingValue.value =
             pongReceivedTime.difference(lastPingTime!).inMilliseconds;
-        print('Pong yanıtı alındı: $pingId');
-        print('Ping süresi: ${pingValue.value} ms');
+        log('Pong yanıtı alındı: $pingId');
+        log('Ping süresi: ${pingValue.value} ms');
       }
     });
     // Başka biri bağlandığında bildiri al
@@ -120,9 +210,25 @@ class SocketioController extends GetxController {
         Message mm = Message.fromJson(data);
         log("$socketPREFIX${mm.user.value.displayname} - ${mm.message}");
 
-        chatlist.value!.add(mm);
+        log("Group ID:" + mm.room.value.groupID.toString());
+        log("Oda Adı:" + mm.room.value.name.toString());
 
-        chatlist.refresh();
+        try {
+          var selectedGroup = groups.value!
+              .firstWhere((group) => group.groupID == mm.room.value.groupID);
+          var selectedRoom = selectedGroup.rooms!.firstWhere(
+              (room) => room.name.value == mm.room.value.name.value);
+
+          selectedRoom.message.add(mm);
+
+          log("Mesaj eklendi: ${mm.toString()}");
+        } catch (e) {
+          log("Mesaj ekleme hatası: $e");
+        }
+
+        // groups.value!.first.rooms!.first.message.add(mm);
+
+        // groups.value!.first.rooms!.first.message.refresh();
       } catch (e) {
         log('${socketPREFIX}Hata (chat): $e');
       }
@@ -151,79 +257,108 @@ class SocketioController extends GetxController {
 
           User userInfo = User.fromJson(element['clientId']);
 
-          bool kullanicivarmi = userList.value!.any(
-            (element) => element.user.value.username == userInfo.username,
-          );
-          if (!kullanicivarmi) {
-            userList.value!.add(
-              Groupmember(
-                user: userInfo.obs,
-                description: "-",
-                status: 0,
-                currentRoom: userRoom?.obs,
-              ),
-            );
-          } else {
-            var a = userList.value!.firstWhere(
+          // Tüm grupları dolaş
+          for (var groupfetch in groups.value!) {
+            // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
+            if (groupfetch.groupmembers == null ||
+                groupfetch.groupmembers!.isEmpty) {
+              groupfetch.groupmembers = RxList<Groupmember>();
+            }
+            groupfetch.groupmembers!.clear();
+            bool kullanicivarmi = groupfetch.groupmembers!.any(
               (element) => element.user.value.username == userInfo.username,
             );
 
-            a.user.value = userInfo;
-            a.currentRoom = userRoom?.obs;
-          }
+            if (!kullanicivarmi) {
+              //Kullanıcı YOKSA LİSTEYE EKLE
 
-          if (userRoom != null) {
-            try {
-              // Kullanıcıların Odaları Listeleniyor
-              bool roomExists =
-                  roomlist.value!.any((room) => room.name == userRoom!.name);
+              groupfetch.groupmembers!.add(
+                Groupmember(
+                  user: userInfo.obs,
+                  description: "-",
+                  status: 0,
+                  currentRoom: userRoom?.obs,
+                ),
+              );
+            } else {
+              //Kullanıcı VARSA ODASINI GÜNCELLEME İŞLEMLERİ
+              // var a = userList.value!.firstWhere(
+              var a = groupfetch.groupmembers!.firstWhere(
+                (element) => element.user.value.username == userInfo.username,
+              );
 
-              // Eğer oda listede yoksa, ekle
-              if (!roomExists) {
-                roomlist.value!.add(userRoom);
+              a.user.value = userInfo;
+              if (userRoom != null) {
+                if (userRoom.groupID == groupfetch.groupID) {
+                  a.user.value = userInfo;
+                  a.currentRoom = userRoom.obs;
+                }
+              } else {
+                a.currentRoom = userRoom?.obs;
               }
+            }
 
-              bool? isUserinRoom;
-              for (var room in roomlist.value!) {
-                isUserinRoom = room.currentMembers
-                    .any((member) => member.username == userInfo.username);
-              }
+            //kullanıcı herhangi bir odada değilse
+            if (userRoom != null) {
+              try {
+                // Kullanıcıların Odaları Listeleniyor
+                bool roomExists = groupfetch.rooms!
+                    .any((room) => room.name == userRoom!.name);
 
-              //Kullanıcı Odasında mı
-              if (isUserinRoom!) {
-                var currentRoom = roomlist.value!.firstWhere(
-                  (room) => room.currentMembers
-                      .any((member) => member.username == userInfo.username),
-                );
+                // Eğer oda listede yoksa, ekle
+                if (!roomExists) {
+                  if (userRoom.groupID == groupfetch.groupID) {
+                    groupfetch.rooms!.add(userRoom);
+                  }
+                }
 
-                if (currentRoom != userRoom) {
-                  for (var room in roomlist.value!) {
+                bool? isUserinRoom;
+                for (var room in groupfetch.rooms!) {
+                  isUserinRoom = room.currentMembers
+                      .any((member) => member.username == userInfo.username);
+                }
+
+                //Kullanıcı Odasında mı
+                if (isUserinRoom!) {
+                  var currentRoom = groupfetch.rooms!.firstWhere(
+                    (room) => room.currentMembers
+                        .any((member) => member.username == userInfo.username),
+                  );
+
+                  if (currentRoom != userRoom) {
+                    for (var room in groupfetch.rooms!) {
+                      room.currentMembers.removeWhere(
+                          (member) => member.username == userInfo.username);
+                    }
+
+                    if (userRoom.groupID == groupfetch.groupID) {
+                      groupfetch.rooms!
+                          .firstWhere((room) => room.name == userRoom!.name)
+                          .currentMembers
+                          .add(userInfo);
+                    }
+                  }
+                } else {
+                  for (var room in groupfetch.rooms!) {
                     room.currentMembers.removeWhere(
                         (member) => member.username == userInfo.username);
                   }
-                  roomlist.value!
-                      .firstWhere((room) => room.name == userRoom!.name)
-                      .currentMembers
-                      .add(userInfo);
+                  if (userRoom.groupID == groupfetch.groupID) {
+                    groupfetch.rooms!
+                        .firstWhere((room) => room.name == userRoom!.name)
+                        .currentMembers
+                        .add(userInfo);
+                  }
                 }
-              } else {
-                for (var room in roomlist.value!) {
-                  room.currentMembers.removeWhere(
-                      (member) => member.username == userInfo.username);
-                }
-                roomlist.value!
-                    .firstWhere((room) => room.name == userRoom!.name)
-                    .currentMembers
-                    .add(userInfo);
+              } catch (e) {
+                log("qwwHataq -- $e");
               }
-            } catch (e) {
-              log("qwwq -- $e");
-            }
-          } else {
-            //Odalarda değilse Sil
-            for (var room in roomlist.value!) {
-              room.currentMembers.removeWhere(
-                  (member) => member.username == userInfo.username);
+            } else {
+              //Odalarda değilse Sil
+              for (var room in groupfetch.rooms!) {
+                room.currentMembers.removeWhere(
+                    (member) => member.username == userInfo.username);
+              }
             }
           }
         }
@@ -260,7 +395,7 @@ class SocketioController extends GetxController {
     pingTimer = Timer.periodic(interval, (timer) {
       pingID.value = DateTime.now().millisecondsSinceEpoch.toString() +
           AppList.sessions.first.currentUser.id.toString();
-      print('Ping gönderiliyor... ID: ${pingID.value}');
+      log('Ping gönderiliyor... ID: ${pingID.value}');
       lastPingTime = DateTime.now();
       socket.emit('ping', {'id': pingID.value}); // ID ile ping gönder
     });
@@ -274,9 +409,29 @@ class SocketioController extends GetxController {
     }
   }
 
+  void exitroom() {
+    for (var groupInfo in groups.value!) {
+      //Oda yoksa bakma
+      if (groupInfo.rooms == null) {
+        continue;
+      }
+      for (var room in groupInfo.rooms!) {
+        room.currentMembers.removeWhere(
+          (member) =>
+              member.username == AppList.sessions.first.currentUser.username,
+        );
+      }
+    }
+  }
+
   void changeroom(Room? room) {
-    log("oda değiştirildi");
-    socket.emit('changeRoom', room?.toJson());
+    try {
+      log("oda değiştirildi");
+
+      socket.emit('changeRoom', room?.toJson());
+    } catch (e) {
+      log("${socketPREFIX}Hata(changeRoom) $e");
+    }
   }
 
 ////////

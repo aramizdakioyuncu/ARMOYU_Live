@@ -112,7 +112,7 @@ class AppList {
     ),
   ];
   static List<Session> sessions = [];
-  static List<Group> groups = [
+  static RxList<Group> groups = <Group>[
     Group(
       groupID: 1,
       logo: Media(
@@ -131,7 +131,7 @@ class AppList {
       rooms: <Room>[].obs,
     ),
     Group(
-      groupID: 1,
+      groupID: 2,
       logo: Media(
         id: 1,
         type: MediaType.image,
@@ -147,5 +147,5 @@ class AppList {
       description: "masdçdçaks",
       rooms: <Room>[].obs,
     ),
-  ];
+  ].obs;
 }
