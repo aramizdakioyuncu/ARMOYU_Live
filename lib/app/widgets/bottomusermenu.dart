@@ -17,47 +17,52 @@ class Bottomusermenu {
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        Get.context!,
-                        MaterialPageRoute(
-                          builder: (context) => GetDisplayMediaSample(),
+            Obx(
+              () => Visibility(
+                visible: socketio.isInRoomanyWhereGroup(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            Get.context!,
+                            MaterialPageRoute(
+                              builder: (context) => GetDisplayMediaSample(),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.videocam_rounded,
                         ),
-                      );
-                    },
-                    child: const Icon(
-                      Icons.videocam_rounded,
-                    ),
-                  ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        Get.context!,
-                        MaterialPageRoute(
-                          builder: (context) => DeviceEnumerationSample(),
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            Get.context!,
+                            MaterialPageRoute(
+                              builder: (context) => DeviceEnumerationSample(),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.screen_share_rounded,
                         ),
-                      );
-                    },
-                    child: const Icon(
-                      Icons.screen_share_rounded,
-                    ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () {},
+                        child: const Icon(
+                          Icons.speed,
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
                   ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: () {},
-                    child: const Icon(
-                      Icons.speed,
-                    ),
-                  ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
             Row(

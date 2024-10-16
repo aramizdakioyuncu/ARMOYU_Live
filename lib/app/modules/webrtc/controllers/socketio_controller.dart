@@ -8,7 +8,7 @@ import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -26,10 +26,22 @@ class SocketioController extends GetxController {
   DateTime? lastPingTime; // Son ping zamanı
   String socketPREFIX = "||SOCKET|| -> ";
 
-  //Sesss değişkenleri
+  @override
+  void onInit() {
+    super.onInit();
+    groups.value = AppList.groups;
+    main();
+  }
 
-  MediaStream? localStream;
-  late RTCPeerConnection peerConnection;
+  @override
+  void onClose() {
+    // Controller kapandığında kaynakları temizle
+    stopFetchingUserList();
+    stopPing();
+    socket.disconnect();
+
+    super.onClose();
+  }
 
   void createRoom(Room room, Group userCurrentgroup) {
     Get.back();
@@ -119,22 +131,6 @@ class SocketioController extends GetxController {
       }
     }
     return null;
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    groups.value = AppList.groups;
-    main();
-  }
-
-  @override
-  void onClose() {
-    // Controller kapandığında kaynakları temizle
-    stopFetchingUserList();
-    stopPing();
-    socket.disconnect();
-    super.onClose();
   }
 
   main() {
