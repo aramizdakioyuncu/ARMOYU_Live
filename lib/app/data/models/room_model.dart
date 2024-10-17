@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 
 class Room {
   final int groupID;
+  final String roomUUID;
   RxString name;
   RxInt limit;
   final RoomType type;
@@ -17,6 +18,7 @@ class Room {
 
   Room({
     required this.groupID,
+    required this.roomUUID,
     required String name,
     required int limit,
     required this.type,
@@ -29,6 +31,7 @@ class Room {
   Map<String, dynamic> toJson() {
     return {
       'groupID': groupID, // Group nesnesini JSON'a çevir
+      'roomUUID': roomUUID, // Group nesnesini JSON'a çevir
       'name': name.value, // RxString'den değer al
       'limit': limit.value, // RxInt'den değer al
       'type': type.index, // Enum değerini indeks olarak kaydet
@@ -44,6 +47,7 @@ class Room {
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
       groupID: json['groupID'], // Group nesnesini JSON'dan oluştur
+      roomUUID: json['roomUUID'], // Group nesnesini JSON'dan oluştur
       name: json['name'],
       limit: json['limit'],
       type: RoomType.values[json['type']], // RoomType'ı enum'dan almak için
@@ -104,6 +108,9 @@ class Room {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: ListTile(
+                  onTap: () {
+                    socketio.callUser(currentMembers[index]);
+                  },
                   leading: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(

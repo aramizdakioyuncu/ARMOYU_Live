@@ -1,4 +1,5 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
+import 'package:armoyu_desktop/app/data/models/internetstatus_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
 import 'package:armoyu_desktop/app/modules/webrtc/views/device_view.dart';
@@ -72,15 +73,15 @@ class Bottomusermenu {
                   children: [
                     Row(
                       children: [
-                        const Icon(
-                          Icons.signal_cellular_alt,
-                          color: Colors.green,
+                        Obx(
+                          () => socketio.internetConnectionStatus.value.icon,
                         ),
                         Obx(
                           () => Text(
-                            "Bağlantı Kuruldu(${socketio.pingValue.value})",
-                            style: const TextStyle(
-                              color: Colors.green,
+                            "${socketio.internetConnectionStatus.value.name}(${socketio.pingValue.value})",
+                            style: TextStyle(
+                              color:
+                                  socketio.internetConnectionStatus.value.color,
                             ),
                           ),
                         ),

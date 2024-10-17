@@ -8,7 +8,9 @@ import 'package:armoyu_desktop/app/widgets/bottomusermenu.dart';
 import 'package:armoyu_desktop/app/widgets/message_sendfield.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get/get.dart';
+import 'package:uuid/uuid.dart';
 
 class Group {
   final int groupID;
@@ -87,6 +89,7 @@ class Group {
                     socketio.createRoom(
                       Room(
                         groupID: groupID,
+                        roomUUID: const Uuid().v1(),
                         name: textController.value.text,
                         limit: 10,
                         type: RoomType.voice,
@@ -109,7 +112,7 @@ class Group {
     var membersScrollController = ScrollController().obs;
     var showMembers = false.obs;
 
-    final socketio = Get.put(SocketioController());
+    final socketio = Get.find<SocketioController>();
 
     var chattextcontroller = TextEditingController().obs;
 
@@ -283,104 +286,198 @@ class Group {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            Obx(
-                              // () => socketio.chatlist.value == null
-                              () => Expanded(
-                                child: socketio.isInRoom(this) != true
-                                    ? Container()
-                                    : Stack(
-                                        children: [
-                                          RawScrollbar(
-                                            thickness: 10,
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              Container(
+                                height: 200,
+                                color: Colors.black,
+                                child: GridView.builder(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                  ),
+                                  itemCount: 3,
+                                  itemBuilder: (context, index) {
+                                    return Obx(
+                                      () => socketio.isStreaming.value == true
+                                          ? Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: RTCVideoView(
+                                                socketio.renderer,
+                                              ),
+                                            )
+                                          : Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade800,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0, // Alt kısma yerleştiriyoruz
+                                left: 0,
+                                right: 0,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: IconButton(
+                                        onPressed: () {},
+                                        icon: const Icon(
+                                            Icons.screen_share_rounded),
+                                        style: const ButtonStyle(
+                                          iconColor: WidgetStatePropertyAll(
+                                            Colors.black,
+                                          ),
+                                          backgroundColor:
+                                              WidgetStatePropertyAll(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: IconButton(
+                                        onPressed: () {},
+                                        style: const ButtonStyle(
+                                          iconColor: WidgetStatePropertyAll(
+                                            Colors.black,
+                                          ),
+                                          backgroundColor:
+                                              WidgetStatePropertyAll(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.mic_off),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: IconButton(
+                                        onPressed: () {},
+                                        style: const ButtonStyle(
+                                          iconColor: WidgetStatePropertyAll(
+                                            Colors.white,
+                                          ),
+                                          backgroundColor:
+                                              WidgetStatePropertyAll(
+                                            Colors.red,
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.call_end),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Obx(
+                            () => Expanded(
+                              child: socketio.isInRoom(this) != true
+                                  ? Container()
+                                  : Stack(
+                                      children: [
+                                        RawScrollbar(
+                                          thickness: 10,
+                                          controller:
+                                              mainScrollController.value,
+                                          radius: const Radius.circular(5),
+                                          thumbVisibility: true,
+                                          trackVisibility: true,
+                                          child: ListView.builder(
+                                            reverse: true,
                                             controller:
                                                 mainScrollController.value,
-                                            radius: const Radius.circular(5),
-                                            thumbVisibility: true,
-                                            trackVisibility: true,
-                                            child: ListView.builder(
-                                              reverse: true,
-                                              controller:
-                                                  mainScrollController.value,
-                                              itemCount: socketio
+                                            itemCount: socketio
+                                                .findmyRoom(this)!
+                                                .message
+                                                .length,
+                                            itemBuilder: (context, index) {
+                                              return socketio
                                                   .findmyRoom(this)!
-                                                  .message
-                                                  .length,
-                                              itemBuilder: (context, index) {
-                                                return socketio
-                                                    .findmyRoom(this)!
-                                                    .message[socketio
-                                                            .findmyRoom(this)!
-                                                            .message
-                                                            .length -
-                                                        index -
-                                                        1]
-                                                    .chatfield();
-                                              },
-                                            ),
+                                                  .message[socketio
+                                                          .findmyRoom(this)!
+                                                          .message
+                                                          .length -
+                                                      index -
+                                                      1]
+                                                  .chatfield();
+                                            },
                                           ),
-                                          Obx(
-                                            () => socketio.socketChatStatus
-                                                        .value ==
-                                                    true
-                                                ? Container()
-                                                : Align(
-                                                    alignment:
-                                                        AlignmentDirectional
-                                                            .bottomCenter,
-                                                    child: Padding(
+                                        ),
+                                        Obx(
+                                          () => socketio
+                                                      .socketChatStatus.value ==
+                                                  true
+                                              ? Container()
+                                              : Align(
+                                                  alignment:
+                                                      AlignmentDirectional
+                                                          .bottomCenter,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            8.0),
+                                                    child: Container(
                                                       padding:
                                                           const EdgeInsets.all(
-                                                              8.0),
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(5),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors
-                                                              .grey.shade800,
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            5,
+                                                              5),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors
+                                                            .grey.shade800,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                          5,
+                                                        ),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Text(
+                                                            "İnternet Bağlantısı Zayıf",
                                                           ),
-                                                        ),
-                                                        child: const Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Text(
-                                                              "İnternet Bağlantısı Zayıf",
-                                                            ),
-                                                            Icon(
-                                                              Icons
-                                                                  .signal_cellular_connected_no_internet_0_bar_rounded,
-                                                              color: Colors.red,
-                                                            )
-                                                          ],
-                                                        ),
+                                                          Icon(
+                                                            Icons
+                                                                .signal_cellular_connected_no_internet_0_bar_rounded,
+                                                            color: Colors.red,
+                                                          )
+                                                        ],
                                                       ),
                                                     ),
                                                   ),
-                                          )
-                                        ],
-                                      ),
-                              ),
+                                                ),
+                                        )
+                                      ],
+                                    ),
                             ),
-                            Obx(
-                              () => socketio.isInRoom(this) != true
-                                  ? Container()
-                                  : MessageSendfield.field1(
-                                      this,
-                                      socketio.findmyRoomanyWhereGroup()!,
-                                      chattextcontroller),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Obx(
+                            () => socketio.isInRoom(this) != true
+                                ? Container()
+                                : Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: MessageSendfield.field1(
+                                        this,
+                                        socketio.findmyRoomanyWhereGroup()!,
+                                        chattextcontroller),
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
                     Obx(

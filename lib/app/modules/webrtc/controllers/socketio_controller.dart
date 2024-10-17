@@ -4,11 +4,13 @@ import 'dart:developer';
 
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
+import 'package:armoyu_desktop/app/data/models/internetstatus_model.dart';
 import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -26,11 +28,22 @@ class SocketioController extends GetxController {
   DateTime? lastPingTime; // Son ping zamanı
   String socketPREFIX = "||SOCKET|| -> ";
 
+  var internetConnectionStatus = InternetType.good.obs;
+
+  late webrtc.RTCVideoRenderer renderer;
+  late webrtc.MediaStream localStream;
+  var isStreaming = false.obs;
+
+  var isCallingMe = false.obs;
+  var whichuserisCallingMe = "".obs;
   @override
   void onInit() {
-    super.onInit();
     groups.value = AppList.groups;
+    renderer = RTCVideoRenderer();
+    initRenderer();
+
     main();
+    super.onInit();
   }
 
   @override
@@ -41,6 +54,269 @@ class SocketioController extends GetxController {
     socket.disconnect();
 
     super.onClose();
+  }
+
+  main() {
+    // Socket.IO'ya bağlanma
+    // socket = IO.io('http://mc.armoyu.com:2021', <String, dynamic>{
+    socket = IO.io('http://localhost:2021', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    // Her 1 saniyede bir kullanıcı listesini iste
+    startFetchingUserList(const Duration(seconds: 1));
+    // Her 1 saniyede bir kullanıcı listesini iste
+
+    startPing(const Duration(seconds: 2));
+    // Ping değerini güncelle
+    socket.on('ping', (data) {
+      // Burada data yerine ping zamanı verilmez.
+      pingValue.value = data; // Bu satırda hata var
+      log('${socketPREFIX}Ping: ${pingValue.value} ms'); // Log ile göster
+    });
+
+    // Pong mesajını dinle
+    socket.on('pong', (data) {
+      // data içinde ping ID'sini al
+
+      String pingId = data['id'];
+      if (pingId != pingID.value) {
+        log("PING ID eşleşmedi: Beklenen ${pingID.value}, gelen $pingId");
+
+        return;
+      }
+
+      DateTime pongReceivedTime = DateTime.now(); // Pong zamanı
+      if (lastPingTime != null) {
+        // Ping süresini hesapla
+        pingValue.value =
+            pongReceivedTime.difference(lastPingTime!).inMilliseconds;
+        log('Pong yanıtı alındı: $pingId');
+        log('Ping süresi: ${pingValue.value} ms');
+
+        if (pingValue.value < 80) {
+          internetConnectionStatus.value = InternetType.good;
+        } else if (pingValue.value < 200) {
+          internetConnectionStatus.value = InternetType.normal;
+        } else {
+          internetConnectionStatus.value = InternetType.weak;
+        }
+      }
+    });
+
+    socket.on('signaling', (data) {
+      // Signaling verilerini dinleme
+      print('Signaling verisi alındı: $data');
+    });
+
+    socket.on('INCOMING_CALL', (data) {
+      // Signaling verilerini dinleme
+      print('Kullanıcı Seni Arıyor: $data');
+      isCallingMe.value = true;
+      whichuserisCallingMe.value = data;
+    });
+    socket.on('CALL_ACCEPTED', (data) {
+      // Signaling verilerini dinleme
+      print('Çağrı kabul edildi: $data');
+    });
+    socket.on('CALL_CLOSED', (data) {
+      // Signaling verilerini dinleme
+      print('Çağrı reddedildi: $data');
+    });
+
+    // Başka biri bağlandığında bildiri al
+    socket.on('userConnected', (data) {
+      if (data != null) {
+        log(socketPREFIX + data.toString());
+      }
+      log(socketPREFIX + data.toString());
+    });
+    // Bağlantı başarılı olduğunda
+    socket.on('connect', (data) {
+      log('${socketPREFIX}Bağlandı');
+
+      if (data != null) {
+        log(socketPREFIX + data.toString());
+      }
+      socketChatStatus.value = true;
+
+      // Kullanıcıyı kaydet
+      registerUser(AppList.sessions.first.currentUser.username.toString(),
+          AppList.sessions.first.currentUser.toJson());
+    });
+
+    // Bağlantı kesildiğinde
+    socket.on('disconnect', (data) {
+      try {
+        log('$socketPREFIX$data');
+      } catch (e) {
+        log('${socketPREFIX}Hata (disconnect): $e');
+      }
+      log('${socketPREFIX}Bağlantı kesildi');
+      socketChatStatus.value = false;
+    });
+
+    // Sunucudan gelen mesajları dinleme
+    socket.on('chat', (data) {
+      try {
+        // print('Sunucudan gelen ham veri: $data');
+        Message mm = Message.fromJson(data);
+        log("$socketPREFIX${mm.user.value.displayname} - ${mm.message}");
+
+        try {
+          var selectedGroup = groups.value!
+              .firstWhere((group) => group.groupID == mm.room.value.groupID);
+          var selectedRoom = selectedGroup.rooms!.firstWhere(
+              (room) => room.name.value == mm.room.value.name.value);
+
+          selectedRoom.message.add(mm);
+
+          log("Mesaj eklendi: ${mm.message.value}");
+        } catch (e) {
+          log("Mesaj ekleme hatası: $e");
+        }
+      } catch (e) {
+        log('${socketPREFIX}Hata (chat): $e');
+      }
+    });
+
+    socket.on('USER_LIST', (data) {
+      try {
+        var json = jsonDecode(data);
+
+        log("${socketPREFIX}Member Count ${json.length}");
+
+        ///Çevrimdışı kullanıcıları kontrol eden listeyi oluştur
+        List<User> tempuserlist = [];
+
+        for (var element in json) {
+          Room? userRoom;
+          if (element['room'] != null) {
+            userRoom = Room.fromJson(element['room']);
+          }
+
+          User userInfo = User.fromJson(element['clientId']);
+
+          ///Çevrimdışı kullanıcıları kontrol eden listeye ekle
+          tempuserlist.add(userInfo);
+
+          // Tüm grupları dolaş
+          for (var groupfetch in groups.value!) {
+            // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
+            if (groupfetch.groupmembers == null ||
+                groupfetch.groupmembers!.isEmpty) {
+              groupfetch.groupmembers = RxList<Groupmember>();
+            }
+            groupfetch.groupmembers!.clear();
+            bool kullanicivarmi = groupfetch.groupmembers!.any(
+              (element) => element.user.value.username == userInfo.username,
+            );
+
+            if (!kullanicivarmi) {
+              //Kullanıcı YOKSA LİSTEYE EKLE
+
+              groupfetch.groupmembers!.add(
+                Groupmember(
+                  user: userInfo.obs,
+                  description: "-",
+                  status: 0,
+                  currentRoom: userRoom?.obs,
+                ),
+              );
+            } else {
+              //Kullanıcı VARSA ODASINI GÜNCELLEME İŞLEMLERİ
+              var a = groupfetch.groupmembers!.firstWhere(
+                (element) => element.user.value.username == userInfo.username,
+              );
+
+              a.user.value = userInfo;
+              if (userRoom != null) {
+                if (userRoom.groupID == groupfetch.groupID) {
+                  a.user.value = userInfo;
+
+                  a.currentRoom = userRoom.obs;
+                }
+              } else {
+                a.currentRoom = userRoom?.obs;
+              }
+            }
+
+            //kullanıcı herhangi bir odada değilse
+            if (userRoom != null) {
+              try {
+                // Kullanıcıların Odaları Listeleniyor
+                bool roomExists = groupfetch.rooms!
+                    .any((room) => room.name == userRoom!.name);
+
+                // Eğer oda listede yoksa, ekle
+                if (!roomExists) {
+                  if (userRoom.groupID == groupfetch.groupID) {
+                    groupfetch.rooms!.add(userRoom);
+                  }
+                }
+
+                bool? isUserinRoom;
+                for (var room in groupfetch.rooms!) {
+                  isUserinRoom = room.currentMembers
+                      .any((member) => member.username == userInfo.username);
+                }
+
+                //Kullanıcı Odasında mı
+                if (isUserinRoom!) {
+                  var currentRoom = groupfetch.rooms!.firstWhere(
+                    (room) => room.currentMembers
+                        .any((member) => member.username == userInfo.username),
+                  );
+
+                  if (currentRoom != userRoom) {
+                    for (var room in groupfetch.rooms!) {
+                      room.currentMembers.removeWhere(
+                          (member) => member.username == userInfo.username);
+                    }
+
+                    if (userRoom.groupID == groupfetch.groupID) {
+                      groupfetch.rooms!
+                          .firstWhere((room) => room.name == userRoom!.name)
+                          .currentMembers
+                          .add(userInfo);
+                    }
+                  }
+                } else {
+                  for (var room in groupfetch.rooms!) {
+                    room.currentMembers.removeWhere(
+                        (member) => member.username == userInfo.username);
+                  }
+                  if (userRoom.groupID == groupfetch.groupID) {
+                    groupfetch.rooms!
+                        .firstWhere((room) => room.name == userRoom!.name)
+                        .currentMembers
+                        .add(userInfo);
+                  }
+                }
+              } catch (e) {
+                log("qwwHataq -- $e");
+              }
+            } else {
+              //Odalarda değilse Sil
+              for (var room in groupfetch.rooms!) {
+                room.currentMembers.removeWhere(
+                    (member) => member.username == userInfo.username);
+              }
+            }
+          }
+        }
+
+        removeNonMatchingUsers(tempuserlist);
+      } catch (e) {
+        log('${socketPREFIX}Hata (USER_LIST): $e');
+      }
+    });
+
+    // Otomatik olarak bağlanma
+    socket.connect();
+
+    return this;
   }
 
   void createRoom(Room room, Group userCurrentgroup) {
@@ -133,257 +409,61 @@ class SocketioController extends GetxController {
     return null;
   }
 
-  main() {
-    // Socket.IO'ya bağlanma
-    // socket = IO.io('http://mc.armoyu.com:2021', <String, dynamic>{
-    socket = IO.io('http://localhost:2021', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': true,
+//WEBRTC
+
+  Future<void> initRenderer() async {
+    await renderer.initialize();
+    await startLocalStream();
+  }
+
+  Future<void> startLocalStream() async {
+    // Kamera ve mikrofon için medya akışı başlatılıyor
+    localStream = await webrtc.navigator.mediaDevices.getUserMedia({
+      'audio': true,
+      'video': {
+        'facingMode': 'user', // Ön kamerayı kullanmak için
+      },
     });
 
-    // Her 1 saniyede bir kullanıcı listesini iste
-    startFetchingUserList(const Duration(seconds: 1));
-    // Her 1 saniyede bir kullanıcı listesini iste
+    // Akış, video render'a atanıyor
+    renderer.srcObject = localStream;
+    isStreaming.value = true; // Akış başladı
+  }
 
-    startPing(const Duration(seconds: 1));
-    // Ping değerini güncelle
-    socket.on('ping', (data) {
-      // Burada data yerine ping zamanı verilmez.
-      pingValue.value = data; // Bu satırda hata var
-      log('${socketPREFIX}Ping: ${pingValue.value} ms'); // Log ile göster
-    });
+//WEBRTC
 
-    // Pong mesajını dinle
-    socket.on('pong', (data) {
-      // data içinde ping ID'sini al
-
-      String pingId = data['id'];
-      if (pingId != pingID.value) {
-        log("PING ID eşleşmedi: Beklenen ${pingID.value}, gelen $pingId");
-        return;
-      }
-
-      DateTime pongReceivedTime = DateTime.now(); // Pong zamanı
-      if (lastPingTime != null) {
-        // Ping süresini hesapla
-        pingValue.value =
-            pongReceivedTime.difference(lastPingTime!).inMilliseconds;
-        log('Pong yanıtı alındı: $pingId');
-        log('Ping süresi: ${pingValue.value} ms');
-      }
-    });
-
-    socket.on('signaling', (data) {
-      // Signaling verilerini dinleme
-      print('Signaling verisi alındı: $data');
-    });
-
-    // Başka biri bağlandığında bildiri al
-    socket.on('userConnected', (data) {
-      if (data != null) {
-        log(socketPREFIX + data.toString());
-      }
-      log(socketPREFIX + data.toString());
-    });
-    // Bağlantı başarılı olduğunda
-    socket.on('connect', (data) {
-      log('${socketPREFIX}Bağlandı');
-
-      if (data != null) {
-        log(socketPREFIX + data.toString());
-      }
-      socketChatStatus.value = true;
-
-      // Kullanıcıyı kaydet
-      registerUser(AppList.sessions.first.currentUser.username.toString(),
-          AppList.sessions.first.currentUser.toJson());
-    });
-
-    // Bağlantı kesildiğinde
-    socket.on('disconnect', (data) {
-      try {
-        log('$socketPREFIX$data');
-      } catch (e) {
-        log('${socketPREFIX}Hata (disconnect): $e');
-      }
-      log('${socketPREFIX}Bağlantı kesildi');
-      socketChatStatus.value = false;
-    });
-
-    // Sunucudan gelen mesajları dinleme
-    socket.on('chat', (data) {
-      try {
-        // print('Sunucudan gelen ham veri: $data');
-        Message mm = Message.fromJson(data);
-        log("$socketPREFIX${mm.user.value.displayname} - ${mm.message}");
-
-        log("Group ID:" + mm.room.value.groupID.toString());
-        log("Oda Adı:" + mm.room.value.name.toString());
-
-        try {
-          var selectedGroup = groups.value!
-              .firstWhere((group) => group.groupID == mm.room.value.groupID);
-          var selectedRoom = selectedGroup.rooms!.firstWhere(
-              (room) => room.name.value == mm.room.value.name.value);
-
-          selectedRoom.message.add(mm);
-
-          log("Mesaj eklendi: ${mm.toString()}");
-        } catch (e) {
-          log("Mesaj ekleme hatası: $e");
-        }
-
-        // groups.value!.first.rooms!.first.message.add(mm);
-
-        // groups.value!.first.rooms!.first.message.refresh();
-      } catch (e) {
-        log('${socketPREFIX}Hata (chat): $e');
-      }
-    });
-
-    // Odalara giren çıkan
-    socket.on('roomChanged', (data) {
-      try {
-        Room mm = Room.fromJson(data);
-        log("$socketPREFIX${mm.name}");
-      } catch (e) {
-        log('${socketPREFIX}Hata (roomChanged): $e');
-      }
-    });
-
-    socket.on('USER_LIST', (data) {
-      try {
-        var json = jsonDecode(data);
-
-        log("${socketPREFIX}Member Count ${json.length}");
-        for (var element in json) {
-          Room? userRoom;
-          if (element['room'] != null) {
-            userRoom = Room.fromJson(element['room']);
-          }
-
-          User userInfo = User.fromJson(element['clientId']);
-
-          // Tüm grupları dolaş
-          for (var groupfetch in groups.value!) {
-            // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
-            if (groupfetch.groupmembers == null ||
-                groupfetch.groupmembers!.isEmpty) {
-              groupfetch.groupmembers = RxList<Groupmember>();
-            }
-            groupfetch.groupmembers!.clear();
-            bool kullanicivarmi = groupfetch.groupmembers!.any(
-              (element) => element.user.value.username == userInfo.username,
-            );
-
-            if (!kullanicivarmi) {
-              //Kullanıcı YOKSA LİSTEYE EKLE
-
-              groupfetch.groupmembers!.add(
-                Groupmember(
-                  user: userInfo.obs,
-                  description: "-",
-                  status: 0,
-                  currentRoom: userRoom?.obs,
-                ),
-              );
-            } else {
-              //Kullanıcı VARSA ODASINI GÜNCELLEME İŞLEMLERİ
-              // var a = userList.value!.firstWhere(
-              var a = groupfetch.groupmembers!.firstWhere(
-                (element) => element.user.value.username == userInfo.username,
-              );
-
-              a.user.value = userInfo;
-              if (userRoom != null) {
-                if (userRoom.groupID == groupfetch.groupID) {
-                  a.user.value = userInfo;
-
-                  a.currentRoom = userRoom.obs;
-                }
-              } else {
-                a.currentRoom = userRoom?.obs;
-              }
-            }
-
-            //kullanıcı herhangi bir odada değilse
-            if (userRoom != null) {
-              try {
-                // Kullanıcıların Odaları Listeleniyor
-                bool roomExists = groupfetch.rooms!
-                    .any((room) => room.name == userRoom!.name);
-
-                // Eğer oda listede yoksa, ekle
-                if (!roomExists) {
-                  if (userRoom.groupID == groupfetch.groupID) {
-                    groupfetch.rooms!.add(userRoom);
-                  }
-                }
-
-                bool? isUserinRoom;
-                for (var room in groupfetch.rooms!) {
-                  isUserinRoom = room.currentMembers
-                      .any((member) => member.username == userInfo.username);
-                }
-
-                //Kullanıcı Odasında mı
-                if (isUserinRoom!) {
-                  var currentRoom = groupfetch.rooms!.firstWhere(
-                    (room) => room.currentMembers
-                        .any((member) => member.username == userInfo.username),
-                  );
-
-                  if (currentRoom != userRoom) {
-                    for (var room in groupfetch.rooms!) {
-                      room.currentMembers.removeWhere(
-                          (member) => member.username == userInfo.username);
-                    }
-
-                    if (userRoom.groupID == groupfetch.groupID) {
-                      groupfetch.rooms!
-                          .firstWhere((room) => room.name == userRoom!.name)
-                          .currentMembers
-                          .add(userInfo);
-                    }
-                  }
-                } else {
-                  for (var room in groupfetch.rooms!) {
-                    room.currentMembers.removeWhere(
-                        (member) => member.username == userInfo.username);
-                  }
-                  if (userRoom.groupID == groupfetch.groupID) {
-                    groupfetch.rooms!
-                        .firstWhere((room) => room.name == userRoom!.name)
-                        .currentMembers
-                        .add(userInfo);
-                  }
-                }
-              } catch (e) {
-                log("qwwHataq -- $e");
-              }
-            } else {
-              //Odalarda değilse Sil
-              for (var room in groupfetch.rooms!) {
-                room.currentMembers.removeWhere(
-                    (member) => member.username == userInfo.username);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        log('${socketPREFIX}Hata (USER_LIST): $e');
-      }
-    });
-
-    // Otomatik olarak bağlanma
-    socket.connect();
-
-    return this;
+  void removeNonMatchingUsers(List<User> tempuserlist) {
+    for (var group in groups.value!) {
+      // group içindeki memberUserList'i tempUserList ile kıyasla
+      group.groupmembers!
+          .removeWhere((element) => !tempuserlist.contains(element.user.value));
+    }
   }
 
   // Socket.io ile mesaj gönderme
   void sendMessage(Message data) {
-    socket.emit("chat", data.toJson());
+    socket.emit("chat", {data.toJson()});
+  }
+
+  // Socket.io birisini arama
+  void callUser(User user) {
+    socket.emit("CALL_USER", user.username);
+  }
+
+  // Socket.io  arama reddetme
+  void closecall(String username) {
+    socket.emit("CLOSE_CALL", username);
+
+    whichuserisCallingMe.value = "";
+    isCallingMe.value = false;
+  }
+
+  // Socket.io  arama açma
+  void acceptcall(String username) {
+    socket.emit("ACCEPT_CALL", username);
+
+    whichuserisCallingMe.value = "";
+    isCallingMe.value = false;
   }
 
   // Kullanıcıyı sunucuya kaydetme
@@ -396,7 +476,7 @@ class SocketioController extends GetxController {
 
   void fetchUserList() {
     // Sunucudan kullanıcı listesi isteme
-    socket.emit('USER_LIST', "");
+    socket.emit('USER_LIST');
   }
 
   void startPing(Duration interval) {
@@ -404,6 +484,7 @@ class SocketioController extends GetxController {
       pingID.value = DateTime.now().millisecondsSinceEpoch.toString() +
           AppList.sessions.first.currentUser.id.toString();
       log('Ping gönderiliyor... ID: ${pingID.value}');
+
       lastPingTime = DateTime.now();
       socket.emit('ping', {'id': pingID.value}); // ID ile ping gönder
     });
@@ -471,46 +552,4 @@ class SocketioController extends GetxController {
       userListTimer = null;
     }
   }
-
-  //////////Sesssss/////
-  ///
-  ///
-  ///
-  ///
-  //
-
-  // void initWebRTC() async {
-  //   // MediaStream oluşturma
-  //   localStream = await navigator.mediaDevices.getUserMedia({
-  //     'audio': true,
-  //   });
-
-  //   // PeerConnection ayarları
-  //   final configuration = {
-  //     'iceServers': [
-  //       {'urls': 'stun:stun.l.google.com:19302'},
-  //     ]
-  //   };
-
-  //   peerConnection = await createPeerConnection(configuration);
-
-  //   // Yerel akışı peerConnection'a ekle
-  //   peerConnection.addStream(localStream!);
-
-  //   // ICE adaylarını gönder
-  //   peerConnection.onIceCandidate = (RTCIceCandidate candidate) {
-  //     socket.emit('signal', {
-  //       'signal': {
-  //         'candidate': candidate.toMap(),
-  //         'type': 'candidate',
-  //       },
-  //       'room': 'room1',
-  //     });
-  //   };
-
-  //   peerConnection.onAddStream = (MediaStream stream) {
-  //     // Uzak akışı işleme
-  //     print('Uzak akış alındı');
-  //   };
-  // }
 }

@@ -1,5 +1,6 @@
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
+import 'package:armoyu_desktop/app/modules/webrtc/controllers/socketio_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -40,12 +41,16 @@ class Groupmember {
   }
 
   Widget listtile() {
+    final socketio = Get.find<SocketioController>();
     return ListTile(
       leading: CircleAvatar(
         foregroundImage: CachedNetworkImageProvider(
           user.value.avatar!.minUrl.toString(),
         ),
       ),
+      onTap: () {
+        socketio.callUser(user.value);
+      },
       title: Text(
         user.value.displayname.toString(),
         overflow: TextOverflow.ellipsis,
