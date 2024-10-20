@@ -114,7 +114,9 @@ class Room {
                   leading: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: Colors.amber,
+                      color: socketio.isSoundStreaming.value == true
+                          ? Colors.amber
+                          : Colors.grey,
                       borderRadius: BorderRadius.circular(
                         50,
                       ),

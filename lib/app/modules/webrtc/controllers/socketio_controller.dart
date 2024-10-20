@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
 
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
@@ -9,9 +10,12 @@ import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
+import 'package:flutter_sound/public/flutter_sound_player.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get/get.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:mic_stream/mic_stream.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketioController extends GetxController {
@@ -36,6 +40,14 @@ class SocketioController extends GetxController {
 
   var isCallingMe = false.obs;
   var whichuserisCallingMe = "".obs;
+
+  final player = AudioPlayer();
+
+  // Stream<List<int>>? _micStream;
+  Stream<Uint8List>? _micStream;
+  FlutterSoundPlayer? _audioPlayer;
+  var isSoundStreaming = false.obs;
+
   @override
   void onInit() {
     groups.value = AppList.groups;
@@ -43,6 +55,10 @@ class SocketioController extends GetxController {
     initRenderer();
 
     main();
+
+    _initAudioStream();
+
+    startListening();
     super.onInit();
   }
 
@@ -52,9 +68,48 @@ class SocketioController extends GetxController {
     stopFetchingUserList();
     stopPing();
     socket.disconnect();
+    player.dispose();
 
+    // _audioPlayer!.closeAudioSession();
     super.onClose();
   }
+
+  ////
+
+  Future<void> _initAudioStream() async {
+    // FlutterSoundPlayer oluşturuluyor
+    _audioPlayer = FlutterSoundPlayer();
+    // await _audioPlayer!.openAudioSession();
+
+    // Mikrofon verisi başlatılıyor
+    _micStream = await MicStream.microphone(
+      // audioSource: AudioSource.DEFAULT,
+      sampleRate: 16000, // Örnekleme hızı
+      channelConfig: ChannelConfig.CHANNEL_IN_MONO,
+      audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+    );
+  }
+
+  void startListening() {
+    if (_micStream != null && !isSoundStreaming.value) {
+      isSoundStreaming.value = true;
+
+      _micStream!.listen((data) async {
+        // Mikrofon verisini besleyerek anlık ses çalınıyor
+        await _audioPlayer!.feedFromStream(data);
+      });
+    }
+  }
+
+  Future<void> stopListening() async {
+    if (isSoundStreaming.value) {
+      await _audioPlayer!.stopPlayer();
+
+      isSoundStreaming.value = false;
+    }
+  }
+
+  ///
 
   main() {
     // Socket.IO'ya bağlanma
@@ -518,6 +573,10 @@ class SocketioController extends GetxController {
 
     if (room != null) {
       room.currentMembers.add(AppList.sessions.first.currentUser);
+      player.setAsset("assets/sounds/join_room.wav");
+      player.play();
+    } else {
+      player.setAsset("assets/sounds/leave_room.wav");
     }
     try {
       log("oda değiştirildi");
