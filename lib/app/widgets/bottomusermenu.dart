@@ -162,15 +162,7 @@ class Bottomusermenu {
                   Obx(
                     () => InkWell(
                       onTap: () {
-                        var speaker = user.speaker;
-                        var mic = user.microphone;
-                        mic.value = !mic.value;
-
-                        if (mic.value == true && speaker.value == false) {
-                          speaker.value = true;
-                        }
-
-                        socketio.userUpdate(user);
+                        socketio.micOnOff(user);
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(
@@ -190,14 +182,7 @@ class Bottomusermenu {
                   Obx(
                     () => InkWell(
                       onTap: () {
-                        var speaker = user.speaker;
-                        var mic = user.microphone;
-
-                        speaker.value = !speaker.value;
-
-                        mic.value = speaker.value;
-
-                        socketio.userUpdate(user);
+                        socketio.speakerOnOff(user);
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Padding(

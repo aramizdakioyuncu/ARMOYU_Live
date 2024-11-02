@@ -36,7 +36,7 @@ class DeviceEnumerationSample extends StatefulWidget {
 class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
   MediaStream? _localStream;
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  // final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   bool _inCalling = false;
 
   List<MediaDeviceInfo> _devices = [];
@@ -77,7 +77,7 @@ class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
     super.deactivate();
     _stop();
     _localRenderer.dispose();
-    _remoteRenderer.dispose();
+    // _remoteRenderer.dispose();
     navigator.mediaDevices.ondevicechange = null;
   }
 
@@ -91,7 +91,7 @@ class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
 
     pc2?.onTrack = (event) {
       if (event.track.kind == 'video') {
-        _remoteRenderer.srcObject = event.streams[0];
+        // _remoteRenderer.srcObject = event.streams[0];
         setState(() {});
       }
     };
@@ -254,7 +254,7 @@ class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
 
   Future<void> initRenderers() async {
     await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    // await _remoteRenderer.initialize();
   }
 
   Future<void> _start() async {
@@ -299,7 +299,7 @@ class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
       await _localStream?.dispose();
       _localStream = null;
       _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
+      // _remoteRenderer.srcObject = null;
       senders.clear();
       _inCalling = false;
       await stopPCs();
@@ -425,10 +425,13 @@ class _DeviceEnumerationSampleState extends State<DeviceEnumerationSample> {
                     ),
                     Expanded(
                       child: Container(
-                        margin: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-                        decoration: BoxDecoration(color: Colors.black54),
-                        child: RTCVideoView(_remoteRenderer),
-                      ),
+                          margin: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+                          decoration: BoxDecoration(color: Colors.black54),
+                          child: 1 == 1
+                              ? Container()
+                              : RTCVideoView(_localRenderer)
+                          // : RTCVideoView(_remoteRenderer),
+                          ),
                     ),
                   ],
                 )),

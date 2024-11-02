@@ -218,7 +218,9 @@ class Group {
                   ),
                   const Spacer(),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // socketio.startListening();
+                    },
                     icon: const Icon(
                       Icons.notifications,
                     ),
@@ -285,200 +287,256 @@ class Group {
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Stack(
-                            children: [
-                              Container(
-                                height: 200,
-                                color: Colors.black,
-                                child: GridView.builder(
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                  ),
-                                  itemCount: 3,
-                                  itemBuilder: (context, index) {
-                                    return Obx(
-                                      () => socketio.isStreaming.value == true
-                                          ? Padding(
-                                              padding:
-                                                  const EdgeInsets.all(8.0),
-                                              child: RTCVideoView(
-                                                socketio.renderer,
-                                              ),
-                                            )
-                                          : Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey.shade800,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0, // Alt kısma yerleştiriyoruz
-                                left: 0,
-                                right: 0,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: IconButton(
-                                        onPressed: () {},
-                                        icon: const Icon(
-                                            Icons.screen_share_rounded),
-                                        style: const ButtonStyle(
-                                          iconColor: WidgetStatePropertyAll(
-                                            Colors.black,
+                    Obx(
+                      () => socketio.isInRoom(this) != true
+                          ? Container()
+                          : Expanded(
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    children: [
+                                      Container(
+                                        height: 200,
+                                        color: Colors.black,
+                                        child: GridView.builder(
+                                          gridDelegate:
+                                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 3,
                                           ),
-                                          backgroundColor:
-                                              WidgetStatePropertyAll(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: IconButton(
-                                        onPressed: () {},
-                                        style: const ButtonStyle(
-                                          iconColor: WidgetStatePropertyAll(
-                                            Colors.black,
-                                          ),
-                                          backgroundColor:
-                                              WidgetStatePropertyAll(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                        icon: const Icon(Icons.mic_off),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: IconButton(
-                                        onPressed: () {},
-                                        style: const ButtonStyle(
-                                          iconColor: WidgetStatePropertyAll(
-                                            Colors.white,
-                                          ),
-                                          backgroundColor:
-                                              WidgetStatePropertyAll(
-                                            Colors.red,
-                                          ),
-                                        ),
-                                        icon: const Icon(Icons.call_end),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          Obx(
-                            () => Expanded(
-                              child: socketio.isInRoom(this) != true
-                                  ? Container()
-                                  : Stack(
-                                      children: [
-                                        RawScrollbar(
-                                          thickness: 10,
-                                          controller:
-                                              mainScrollController.value,
-                                          radius: const Radius.circular(5),
-                                          thumbVisibility: true,
-                                          trackVisibility: true,
-                                          child: ListView.builder(
-                                            reverse: true,
-                                            controller:
-                                                mainScrollController.value,
-                                            itemCount: socketio
-                                                .findmyRoom(this)!
-                                                .message
-                                                .length,
-                                            itemBuilder: (context, index) {
-                                              return socketio
-                                                  .findmyRoom(this)!
-                                                  .message[socketio
-                                                          .findmyRoom(this)!
-                                                          .message
-                                                          .length -
-                                                      index -
-                                                      1]
-                                                  .chatfield();
-                                            },
-                                          ),
-                                        ),
-                                        Obx(
-                                          () => socketio
-                                                      .socketChatStatus.value ==
-                                                  true
-                                              ? Container()
-                                              : Align(
-                                                  alignment:
-                                                      AlignmentDirectional
-                                                          .bottomCenter,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Container(
+                                          itemCount: 3,
+                                          itemBuilder: (context, index) {
+                                            return Obx(
+                                              () => socketio
+                                                          .isStreaming.value ==
+                                                      true
+                                                  ? Padding(
                                                       padding:
                                                           const EdgeInsets.all(
-                                                              5),
+                                                        8.0,
+                                                      ),
+                                                      child: RTCVideoView(
+                                                        index == 1
+                                                            ? socketio
+                                                                .remoteRTCVideoRenderer
+                                                            : socketio.renderer,
+                                                      ),
+                                                    )
+                                                  : Container(
                                                       decoration: BoxDecoration(
                                                         color: Colors
                                                             .grey.shade800,
                                                         borderRadius:
                                                             BorderRadius
-                                                                .circular(
-                                                          5,
-                                                        ),
+                                                                .circular(10),
                                                       ),
-                                                      child: const Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Text(
-                                                            "İnternet Bağlantısı Zayıf",
-                                                          ),
-                                                          Icon(
-                                                            Icons
-                                                                .signal_cellular_connected_no_internet_0_bar_rounded,
-                                                            color: Colors.red,
-                                                          )
-                                                        ],
-                                                      ),
+                                                      child:
+                                                          const CircularProgressIndicator(),
                                                     ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 0, // Alt kısma yerleştiriyoruz
+                                        left: 0,
+                                        right: 0,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: IconButton(
+                                                onPressed: () {},
+                                                icon: const Icon(
+                                                    Icons.screen_share_rounded),
+                                                style: const ButtonStyle(
+                                                  iconColor:
+                                                      WidgetStatePropertyAll(
+                                                    Colors.black,
+                                                  ),
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll(
+                                                    Colors.white,
                                                   ),
                                                 ),
-                                        )
-                                      ],
-                                    ),
-                            ),
-                          ),
-                          Obx(
-                            () => socketio.isInRoom(this) != true
-                                ? Container()
-                                : Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: MessageSendfield.field1(
-                                        this,
-                                        socketio.findmyRoomanyWhereGroup()!,
-                                        chattextcontroller),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: IconButton(
+                                                onPressed: () {
+                                                  socketio.micOnOff(
+                                                    AppList.sessions.first
+                                                        .currentUser,
+                                                  );
+                                                },
+                                                style: AppList
+                                                            .sessions
+                                                            .first
+                                                            .currentUser
+                                                            .microphone
+                                                            .value ==
+                                                        true
+                                                    ? const ButtonStyle(
+                                                        iconColor:
+                                                            WidgetStatePropertyAll(
+                                                          Colors.black,
+                                                        ),
+                                                        backgroundColor:
+                                                            WidgetStatePropertyAll(
+                                                          Colors.white,
+                                                        ),
+                                                      )
+                                                    : const ButtonStyle(
+                                                        iconColor:
+                                                            WidgetStatePropertyAll(
+                                                          Colors.white,
+                                                        ),
+                                                        backgroundColor:
+                                                            WidgetStatePropertyAll(
+                                                          Colors.red,
+                                                        ),
+                                                      ),
+                                                icon: const Icon(Icons.mic_off),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: IconButton(
+                                                onPressed: () {
+                                                  socketio.changeroom(null);
+                                                },
+                                                style: const ButtonStyle(
+                                                  iconColor:
+                                                      WidgetStatePropertyAll(
+                                                    Colors.white,
+                                                  ),
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll(
+                                                    Colors.red,
+                                                  ),
+                                                ),
+                                                icon:
+                                                    const Icon(Icons.call_end),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                          ),
-                        ],
-                      ),
+                                  Obx(
+                                    () => Expanded(
+                                      child: socketio.isInRoom(this) != true
+                                          ? Container()
+                                          : Stack(
+                                              children: [
+                                                RawScrollbar(
+                                                  thickness: 10,
+                                                  controller:
+                                                      mainScrollController
+                                                          .value,
+                                                  radius:
+                                                      const Radius.circular(5),
+                                                  thumbVisibility: true,
+                                                  trackVisibility: true,
+                                                  child: ListView.builder(
+                                                    reverse: true,
+                                                    controller:
+                                                        mainScrollController
+                                                            .value,
+                                                    itemCount: socketio
+                                                        .findmyRoom(this)!
+                                                        .message
+                                                        .length,
+                                                    itemBuilder:
+                                                        (context, index) {
+                                                      return socketio
+                                                          .findmyRoom(this)!
+                                                          .message[socketio
+                                                                  .findmyRoom(
+                                                                      this)!
+                                                                  .message
+                                                                  .length -
+                                                              index -
+                                                              1]
+                                                          .chatfield();
+                                                    },
+                                                  ),
+                                                ),
+                                                Obx(
+                                                  () => socketio
+                                                              .socketChatStatus
+                                                              .value ==
+                                                          true
+                                                      ? Container()
+                                                      : Align(
+                                                          alignment:
+                                                              AlignmentDirectional
+                                                                  .bottomCenter,
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(5),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: Colors
+                                                                    .grey
+                                                                    .shade800,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                  5,
+                                                                ),
+                                                              ),
+                                                              child: const Row(
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                children: [
+                                                                  Text(
+                                                                    "İnternet Bağlantısı Zayıf",
+                                                                  ),
+                                                                  Icon(
+                                                                    Icons
+                                                                        .signal_cellular_connected_no_internet_0_bar_rounded,
+                                                                    color: Colors
+                                                                        .red,
+                                                                  )
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                )
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                  Obx(
+                                    () => socketio.isInRoom(this) != true
+                                        ? Container()
+                                        : Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: MessageSendfield.field1(
+                                                this,
+                                                socketio
+                                                    .findmyRoomanyWhereGroup()!,
+                                                chattextcontroller),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
                     ),
                     Obx(
                       () => Visibility(

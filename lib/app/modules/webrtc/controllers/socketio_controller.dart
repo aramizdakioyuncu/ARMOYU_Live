@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
@@ -10,12 +11,10 @@ import 'package:armoyu_desktop/app/data/models/message_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/user_model.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
-import 'package:flutter_sound/public/flutter_sound_player.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get/get.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:mic_stream/mic_stream.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketioController extends GetxController {
@@ -34,77 +33,152 @@ class SocketioController extends GetxController {
 
   var internetConnectionStatus = InternetType.good.obs;
 
-  late webrtc.RTCVideoRenderer renderer;
-  late webrtc.MediaStream localStream;
-  var isStreaming = false.obs;
+// INPUTS OUTPUST VIDEO
+  List<MediaDeviceInfo> devices = [];
+
+  List<MediaDeviceInfo> get audioInputs =>
+      devices.where((device) => device.kind == 'audioinput').toList();
+
+  List<MediaDeviceInfo> get audioOutputs =>
+      devices.where((device) => device.kind == 'audiooutput').toList();
+
+  List<MediaDeviceInfo> get videoInputs =>
+      devices.where((device) => device.kind == 'videoinput').toList();
 
   var isCallingMe = false.obs;
   var whichuserisCallingMe = "".obs;
 
   final player = AudioPlayer();
+//WEBRTC
+  final webrtc.RTCVideoRenderer renderer = RTCVideoRenderer();
+  var isStreaming = false.obs;
+  RTCPeerConnection? pc1;
+  var senders = <RTCRtpSender>[];
 
-  // Stream<List<int>>? _micStream;
-  Stream<Uint8List>? _micStream;
-  FlutterSoundPlayer? _audioPlayer;
+//WEBRTC
+
+  final speakingvoices = AudioPlayer();
+
   var isSoundStreaming = false.obs;
+
+  // videoRenderer for remotePeer
+  final remoteRTCVideoRenderer = RTCVideoRenderer();
+
+  // mediaStream for localPeer
+  MediaStream? localStream;
+
+  // RTC peer connection
+  RTCPeerConnection? _rtcPeerConnection;
+
+  // list of rtcCandidates to be sent over signalling
+  List<RTCIceCandidate> rtcIceCadidates = [];
 
   @override
   void onInit() {
     groups.value = AppList.groups;
-    renderer = RTCVideoRenderer();
-    initRenderer();
 
+    initRenderer();
+    remoteRTCVideoRenderer.initialize();
+
+    _setupPeerConnection();
     main();
 
-    _initAudioStream();
-
-    startListening();
     super.onInit();
   }
 
   @override
   void onClose() {
-    // Controller kapandığında kaynakları temizle
     stopFetchingUserList();
     stopPing();
     socket.disconnect();
-    player.dispose();
-
-    // _audioPlayer!.closeAudioSession();
     super.onClose();
   }
 
-  ////
+  ///
+  _setupPeerConnection() async {
+    // create peer connection
+    _rtcPeerConnection = await createPeerConnection({
+      'iceServers': [
+        {
+          'urls': [
+            'stun:stun1.l.google.com:19302',
+            'stun:stun2.l.google.com:19302'
+          ]
+        }
+      ]
+    });
 
-  Future<void> _initAudioStream() async {
-    // FlutterSoundPlayer oluşturuluyor
-    _audioPlayer = FlutterSoundPlayer();
-    // await _audioPlayer!.openAudioSession();
+    // socket!.on("IceCandidate", (data) {
+    //   String candidate = data["iceCandidate"]["candidate"];
+    //   String sdpMid = data["iceCandidate"]["id"];
+    //   int sdpMLineIndex = data["iceCandidate"]["label"];
 
-    // Mikrofon verisi başlatılıyor
-    _micStream = await MicStream.microphone(
-      // audioSource: AudioSource.DEFAULT,
-      sampleRate: 16000, // Örnekleme hızı
-      channelConfig: ChannelConfig.CHANNEL_IN_MONO,
-      audioFormat: AudioFormat.ENCODING_PCM_16BIT,
-    );
+    //   // add iceCandidate
+    //   _rtcPeerConnection!.addCandidate(RTCIceCandidate(
+    //     candidate,
+    //     sdpMid,
+    //     sdpMLineIndex,
+    //   ));
+    // });
+
+    // // set SDP offer as remoteDescription for peerConnection
+    // // await _rtcPeerConnection!.setRemoteDescription(
+    // //   RTCSessionDescription(widget.offer["sdp"], widget.offer["type"]),
+    // // );
+
+    // // create SDP answer
+    // RTCSessionDescription answer = await _rtcPeerConnection!.createAnswer();
+
+    // // set SDP answer as localDescription for peerConnection
+    // _rtcPeerConnection!.setLocalDescription(answer);
+
+    // // send SDP answer to remote peer over signalling
+    // socket!.emit("answerCall", {
+    //   "callerId": "1",
+    //   "sdpAnswer": answer.toMap(),
+    // });
+
+    // // listen for remotePeer mediaTrack event
+    // _rtcPeerConnection!.onTrack = (event) {
+    //   remoteRTCVideoRenderer.srcObject = event.streams[0];
+    // };
+
+    // _rtcPeerConnection!.onIceCandidate =
+    //     (RTCIceCandidate candidate) => rtcIceCadidates.add(candidate);
+
+    // socket.on("callAnswered", (data) async {
+    //   // set SDP answer as remoteDescription for peerConnection
+    //   await _rtcPeerConnection!.setRemoteDescription(
+    //     RTCSessionDescription(
+    //       data["sdpAnswer"]["sdp"],
+    //       data["sdpAnswer"]["type"],
+    //     ),
+    //   );
+
+    //   // send iceCandidate generated to remote peer over signalling
+    //   for (RTCIceCandidate candidate in rtcIceCadidates) {
+    //     socket.emit("IceCandidate", {
+    //       "calleeId": "1",
+    //       "iceCandidate": {
+    //         "id": candidate.sdpMid,
+    //         "label": candidate.sdpMLineIndex,
+    //         "candidate": candidate.candidate
+    //       }
+    //     });
+    //   }
+    // });
   }
 
-  void startListening() {
-    if (_micStream != null && !isSoundStreaming.value) {
-      isSoundStreaming.value = true;
-
-      _micStream!.listen((data) async {
-        // Mikrofon verisini besleyerek anlık ses çalınıyor
-        await _audioPlayer!.feedFromStream(data);
-      });
-    }
+  ///
+  ///
+  Future<Uint8List> loadMusicFileAsBytes(String filePath) async {
+    // Cihazın yerel dosya sisteminden müzik dosyasını okuyoruz
+    File file = File(filePath);
+    return await file.readAsBytes();
   }
 
   Future<void> stopListening() async {
     if (isSoundStreaming.value) {
-      await _audioPlayer!.stopPlayer();
-
       isSoundStreaming.value = false;
     }
   }
@@ -147,8 +221,8 @@ class SocketioController extends GetxController {
         // Ping süresini hesapla
         pingValue.value =
             pongReceivedTime.difference(lastPingTime!).inMilliseconds;
-        log('Pong yanıtı alındı: $pingId');
-        log('Ping süresi: ${pingValue.value} ms');
+        // log('Pong yanıtı alındı: $pingId');
+        // log('Ping süresi: ${pingValue.value} ms');
 
         if (pingValue.value < 80) {
           internetConnectionStatus.value = InternetType.good;
@@ -165,11 +239,50 @@ class SocketioController extends GetxController {
       print('Signaling verisi alındı: $data');
     });
 
+    socket.on("IceCandidate", (data) {
+      String candidate = data["iceCandidate"]["candidate"];
+      String sdpMid = data["iceCandidate"]["id"];
+      int sdpMLineIndex = data["iceCandidate"]["label"];
+
+      // add iceCandidate
+      _rtcPeerConnection!.addCandidate(RTCIceCandidate(
+        candidate,
+        sdpMid,
+        sdpMLineIndex,
+      ));
+    });
+
+    socket.on("callAnswered", (data) async {
+      // set SDP answer as remoteDescription for peerConnection
+      await _rtcPeerConnection!.setRemoteDescription(
+        RTCSessionDescription(
+          data["sdpAnswer"]["sdp"],
+          data["sdpAnswer"]["type"],
+        ),
+      );
+
+      // send iceCandidate generated to remote peer over signalling
+      for (RTCIceCandidate candidate in rtcIceCadidates) {
+        socket.emit("IceCandidate", {
+          "calleeId": "1",
+          "iceCandidate": {
+            "id": candidate.sdpMid,
+            "label": candidate.sdpMLineIndex,
+            "candidate": candidate.candidate
+          }
+        });
+      }
+    });
+
     socket.on('INCOMING_CALL', (data) {
       // Signaling verilerini dinleme
-      print('Kullanıcı Seni Arıyor: $data');
+
+      print('Kullanıcı Seni Arıyor: ${data['callerId']}');
+
+      Map offer = data['sdpOffer'];
+
       isCallingMe.value = true;
-      whichuserisCallingMe.value = data;
+      whichuserisCallingMe.value = data['callerId'];
     });
     socket.on('CALL_ACCEPTED', (data) {
       // Signaling verilerini dinleme
@@ -374,6 +487,202 @@ class SocketioController extends GetxController {
     return this;
   }
 
+//WEBRTC
+
+  Future<void> initRenderer() async {
+    pc1 ??= await createPeerConnection({});
+
+    await renderer.initialize();
+    await startLocalStream();
+    // await _initMediaRecorder();
+  }
+
+  Future<void> startLocalStream() async {
+    // Kamera ve mikrofon için medya akışı başlatılıyor
+    localStream = await webrtc.navigator.mediaDevices.getUserMedia({
+      'audio': true,
+      'video': {
+        'facingMode': 'user', // Ön kamerayı kullanmak için
+      },
+    });
+
+    localStream!.getTracks().forEach((track) async {
+      var rtpSender = await pc1?.addTrack(track, localStream!);
+      log('track.settings ' + track.getSettings().toString());
+      senders.add(rtpSender!);
+    });
+
+    // Akış, video render'a atanıyor
+    renderer.srcObject = localStream;
+    isStreaming.value = true; // Akış başladı
+  }
+
+//WEBRTC
+
+  void removeNonMatchingUsers(List<User> tempuserlist) {
+    for (var group in groups.value!) {
+      // group içindeki memberUserList'i tempUserList ile kıyasla
+      group.groupmembers!
+          .removeWhere((element) => !tempuserlist.contains(element.user.value));
+    }
+  }
+
+  // Socket.io ile mesaj gönderme
+  void sendMessage(Message data) {
+    socket.emit("chat", {data.toJson()});
+  }
+
+  // Socket.io birisini arama
+  Future<void> callUser(User user) async {
+    // Yerel medya akışını RTCPeerConnection'a ekle
+    localStream!.getTracks().forEach((track) {
+      _rtcPeerConnection!.addTrack(track, localStream!);
+    });
+
+    RTCSessionDescription offer = await _rtcPeerConnection!.createOffer();
+    await _rtcPeerConnection!.setLocalDescription(offer);
+
+    RTCSessionDescription answer = await _rtcPeerConnection!.createAnswer();
+
+    // set SDP offer as remoteDescription for peerConnection
+    await _rtcPeerConnection!.setRemoteDescription(
+      RTCSessionDescription(offer.toMap()["sdp"], offer.toMap()["type"]),
+    );
+
+    socket.emit("CALL_USER", {user.username, offer.toMap()});
+  }
+
+  // Socket.io  arama reddetme
+  void closecall(String username) {
+    socket.emit("CLOSE_CALL", username);
+
+    whichuserisCallingMe.value = "";
+    isCallingMe.value = false;
+  }
+
+  // Socket.io  arama açma
+  void acceptcall(String username) {
+    socket.emit("ACCEPT_CALL", username);
+
+    whichuserisCallingMe.value = "";
+    isCallingMe.value = false;
+  }
+
+  // Kullanıcıyı sunucuya kaydetme
+  void registerUser(String name, dynamic clientId) {
+    socket.emit('REGISTER', {
+      'name': name,
+      'clientId': clientId,
+    });
+  }
+
+  void fetchUserList() {
+    // Sunucudan kullanıcı listesi isteme
+    socket.emit('USER_LIST');
+  }
+
+  void startPing(Duration interval) {
+    pingTimer = Timer.periodic(interval, (timer) {
+      pingID.value = DateTime.now().millisecondsSinceEpoch.toString() +
+          AppList.sessions.first.currentUser.id.toString();
+      // log('Ping gönderiliyor... ID: ${pingID.value}');
+
+      lastPingTime = DateTime.now();
+      socket.emit('ping', {'id': pingID.value}); // ID ile ping gönder
+    });
+  }
+
+  void stopPing() {
+    // Timer durdurma (iptal etme)
+    if (pingTimer != null) {
+      pingTimer!.cancel();
+      pingTimer = null;
+    }
+  }
+
+  void exitroom() {
+    for (var groupInfo in groups.value!) {
+      //Oda yoksa bakma
+      if (groupInfo.rooms == null) {
+        continue;
+      }
+      for (var room in groupInfo.rooms!) {
+        room.currentMembers.removeWhere(
+          (member) =>
+              member.username == AppList.sessions.first.currentUser.username,
+        );
+      }
+    }
+  }
+
+  void micOnOff(User user) {
+    var speaker = user.speaker;
+    var mic = user.microphone;
+    mic.value = !mic.value;
+
+    if (mic.value == true && speaker.value == false) {
+      speaker.value = true;
+    }
+
+    userUpdate(user);
+  }
+
+  void speakerOnOff(User user) {
+    var speaker = user.speaker;
+    var mic = user.microphone;
+
+    speaker.value = !speaker.value;
+
+    mic.value = speaker.value;
+
+    userUpdate(user);
+  }
+
+  void changeroom(Room? room) {
+    exitroom();
+
+    if (room != null) {
+      room.currentMembers.add(AppList.sessions.first.currentUser);
+      player.play(AssetSource("sounds/join_room.wav"));
+    } else {
+      player.play(AssetSource("sounds/leave_room.wav"));
+    }
+
+    try {
+      log("oda değiştirildi");
+
+      socket.emit('changeRoom', room?.toJson());
+    } catch (e) {
+      log("${socketPREFIX}Hata(changeRoom) $e");
+    }
+  }
+
+  void userUpdate(User user) {
+    try {
+      log("Bilgiler Güncellendi");
+
+      socket.emit('profileUpdate', user.toJson());
+    } catch (e) {
+      log("${socketPREFIX}Hata(changeRoom) $e");
+    }
+  }
+
+////////
+  void startFetchingUserList(Duration interval) {
+    userListTimer = Timer.periodic(interval, (timer) {
+      fetchUserList();
+    });
+  }
+
+  void stopFetchingUserList() {
+    // Timer durdurma (iptal etme)
+    if (userListTimer != null) {
+      userListTimer!.cancel();
+      userListTimer = null;
+    }
+  }
+
+  //
   void createRoom(Room room, Group userCurrentgroup) {
     Get.back();
     var currentgroup = findcurrentGroup(userCurrentgroup);
@@ -462,153 +771,5 @@ class SocketioController extends GetxController {
       }
     }
     return null;
-  }
-
-//WEBRTC
-
-  Future<void> initRenderer() async {
-    await renderer.initialize();
-    await startLocalStream();
-  }
-
-  Future<void> startLocalStream() async {
-    // Kamera ve mikrofon için medya akışı başlatılıyor
-    localStream = await webrtc.navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': {
-        'facingMode': 'user', // Ön kamerayı kullanmak için
-      },
-    });
-
-    // Akış, video render'a atanıyor
-    renderer.srcObject = localStream;
-    isStreaming.value = true; // Akış başladı
-  }
-
-//WEBRTC
-
-  void removeNonMatchingUsers(List<User> tempuserlist) {
-    for (var group in groups.value!) {
-      // group içindeki memberUserList'i tempUserList ile kıyasla
-      group.groupmembers!
-          .removeWhere((element) => !tempuserlist.contains(element.user.value));
-    }
-  }
-
-  // Socket.io ile mesaj gönderme
-  void sendMessage(Message data) {
-    socket.emit("chat", {data.toJson()});
-  }
-
-  // Socket.io birisini arama
-  void callUser(User user) {
-    socket.emit("CALL_USER", user.username);
-  }
-
-  // Socket.io  arama reddetme
-  void closecall(String username) {
-    socket.emit("CLOSE_CALL", username);
-
-    whichuserisCallingMe.value = "";
-    isCallingMe.value = false;
-  }
-
-  // Socket.io  arama açma
-  void acceptcall(String username) {
-    socket.emit("ACCEPT_CALL", username);
-
-    whichuserisCallingMe.value = "";
-    isCallingMe.value = false;
-  }
-
-  // Kullanıcıyı sunucuya kaydetme
-  void registerUser(String name, dynamic clientId) {
-    socket.emit('REGISTER', {
-      'name': name,
-      'clientId': clientId,
-    });
-  }
-
-  void fetchUserList() {
-    // Sunucudan kullanıcı listesi isteme
-    socket.emit('USER_LIST');
-  }
-
-  void startPing(Duration interval) {
-    pingTimer = Timer.periodic(interval, (timer) {
-      pingID.value = DateTime.now().millisecondsSinceEpoch.toString() +
-          AppList.sessions.first.currentUser.id.toString();
-      log('Ping gönderiliyor... ID: ${pingID.value}');
-
-      lastPingTime = DateTime.now();
-      socket.emit('ping', {'id': pingID.value}); // ID ile ping gönder
-    });
-  }
-
-  void stopPing() {
-    // Timer durdurma (iptal etme)
-    if (pingTimer != null) {
-      pingTimer!.cancel();
-      pingTimer = null;
-    }
-  }
-
-  void exitroom() {
-    for (var groupInfo in groups.value!) {
-      //Oda yoksa bakma
-      if (groupInfo.rooms == null) {
-        continue;
-      }
-      for (var room in groupInfo.rooms!) {
-        room.currentMembers.removeWhere(
-          (member) =>
-              member.username == AppList.sessions.first.currentUser.username,
-        );
-      }
-    }
-  }
-
-  void changeroom(Room? room) {
-    exitroom();
-
-    if (room != null) {
-      room.currentMembers.add(AppList.sessions.first.currentUser);
-      player.setAsset("assets/sounds/join_room.wav");
-      player.play();
-    } else {
-      player.setAsset("assets/sounds/leave_room.wav");
-    }
-    try {
-      log("oda değiştirildi");
-
-      socket.emit('changeRoom', room?.toJson());
-    } catch (e) {
-      log("${socketPREFIX}Hata(changeRoom) $e");
-    }
-  }
-
-  void userUpdate(User user) {
-    try {
-      log("Bilgiler Güncellendi");
-
-      socket.emit('profileUpdate', user.toJson());
-    } catch (e) {
-      log("${socketPREFIX}Hata(changeRoom) $e");
-    }
-  }
-
-////////
-  void startFetchingUserList(Duration interval) {
-    userListTimer = Timer.periodic(interval, (timer) {
-      fetchUserList();
-    });
-  }
-
-  void stopFetchingUserList() {
-    // Timer durdurma (iptal etme)
-    if (userListTimer != null) {
-      userListTimer!.cancel();
-      userListTimer = null;
-    }
   }
 }
