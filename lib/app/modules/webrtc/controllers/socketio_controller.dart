@@ -77,6 +77,9 @@ class SocketioController extends GetxController {
   void onInit() {
     groups.value = AppList.groups;
 
+    //Grup Odaları ve Üyelerini İnit yapar
+    initgroup();
+
     initRenderer();
     remoteRTCVideoRenderer.initialize();
 
@@ -355,9 +358,9 @@ class SocketioController extends GetxController {
 
         log("${socketPREFIX}Member Count ${json.length}");
 
-        ///Çevrimdışı kullanıcıları kontrol eden listeyi oluştur
-        List<User> tempuserlist = [];
+        List<Map<User, Room?>> tmpUserList = [];
 
+        //Üyeleri Dolaş
         for (var element in json) {
           Room? userRoom;
           if (element['room'] != null) {
@@ -366,24 +369,17 @@ class SocketioController extends GetxController {
 
           User userInfo = User.fromJson(element['clientId']);
 
-          ///Çevrimdışı kullanıcıları kontrol eden listeye ekle
-          tempuserlist.add(userInfo);
+          tmpUserList.add({userInfo: userRoom});
 
           // Tüm grupları dolaş
           for (var groupfetch in groups.value!) {
-            // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
-            if (groupfetch.groupmembers == null ||
-                groupfetch.groupmembers!.isEmpty) {
-              groupfetch.groupmembers = RxList<Groupmember>();
-            }
-            groupfetch.groupmembers!.clear();
+            //
             bool kullanicivarmi = groupfetch.groupmembers!.any(
               (element) => element.user.value.username == userInfo.username,
             );
 
             if (!kullanicivarmi) {
               //Kullanıcı YOKSA LİSTEYE EKLE
-
               groupfetch.groupmembers!.add(
                 Groupmember(
                   user: userInfo.obs,
@@ -399,10 +395,9 @@ class SocketioController extends GetxController {
               );
 
               a.user.value = userInfo;
+
               if (userRoom != null) {
                 if (userRoom.groupID == groupfetch.groupID) {
-                  a.user.value = userInfo;
-
                   a.currentRoom = userRoom.obs;
                 }
               } else {
@@ -410,39 +405,47 @@ class SocketioController extends GetxController {
               }
             }
 
-            //kullanıcı herhangi bir odada değilse
+            //Kullanıcı bir odadaysa
             if (userRoom != null) {
               try {
                 // Kullanıcıların Odaları Listeleniyor
                 bool roomExists = groupfetch.rooms!
                     .any((room) => room.name == userRoom!.name);
 
-                // Eğer oda listede yoksa, ekle
+                // Eğer oda clientde listede yoksa, ekle
                 if (!roomExists) {
                   if (userRoom.groupID == groupfetch.groupID) {
                     groupfetch.rooms!.add(userRoom);
                   }
                 }
+              } catch (e) {
+                log('${socketPREFIX}Hata (Kullanıcı Odaları Oluşturulamadı) : $e');
+              }
+              try {
+                // Kullanıcının herhangi bir odada olup olmadığını kontrol ediyoruz
+                bool isUserinRoom = groupfetch.rooms!.any(
+                  (room) => room.currentMembers.any(
+                    (member) => member.username == userInfo.username,
+                  ),
+                );
 
-                bool? isUserinRoom;
-                for (var room in groupfetch.rooms!) {
-                  isUserinRoom = room.currentMembers
-                      .any((member) => member.username == userInfo.username);
-                }
-
-                //Kullanıcı Odasında mı
-                if (isUserinRoom!) {
+                //Kullanıcı bir odada
+                if (isUserinRoom) {
                   var currentRoom = groupfetch.rooms!.firstWhere(
                     (room) => room.currentMembers
                         .any((member) => member.username == userInfo.username),
                   );
 
+                  //Kullanıcı bir odada ama doğru odada değil
                   if (currentRoom != userRoom) {
+                    //Kullanıcıyı yanlış odadan sil
+
                     for (var room in groupfetch.rooms!) {
                       room.currentMembers.removeWhere(
                           (member) => member.username == userInfo.username);
                     }
 
+                    //Doğru Gruptaki odaya yerleştir
                     if (userRoom.groupID == groupfetch.groupID) {
                       groupfetch.rooms!
                           .firstWhere((room) => room.name == userRoom!.name)
@@ -451,10 +454,14 @@ class SocketioController extends GetxController {
                     }
                   }
                 } else {
+                  //Kullanıcı herhangi bir odada değil odaya eklenecek
+
+                  //Odaya eklemeden önce yinede gruptaki tüm odalarda Kullanıcının olma ihtimaline karşı silme
                   for (var room in groupfetch.rooms!) {
                     room.currentMembers.removeWhere(
                         (member) => member.username == userInfo.username);
                   }
+
                   if (userRoom.groupID == groupfetch.groupID) {
                     groupfetch.rooms!
                         .firstWhere((room) => room.name == userRoom!.name)
@@ -463,7 +470,7 @@ class SocketioController extends GetxController {
                   }
                 }
               } catch (e) {
-                log("qwwHataq -- $e");
+                log("'${socketPREFIX}Hata (Kullanıcı Odalar) -- $e'");
               }
             } else {
               //Odalarda değilse Sil
@@ -472,10 +479,18 @@ class SocketioController extends GetxController {
                     (member) => member.username == userInfo.username);
               }
             }
+
+            //
+            //Online olmayan Kullanıcıları listeden sil
+            try {
+              if (groupfetch.groupmembers!.isNotEmpty) {
+                removeNonMatchingUsers(groupfetch, tmpUserList);
+              }
+            } catch (e) {
+              log('${socketPREFIX}Hata (removeNonMatchingUsers) : $e');
+            }
           }
         }
-
-        removeNonMatchingUsers(tempuserlist);
       } catch (e) {
         log('${socketPREFIX}Hata (USER_LIST): $e');
       }
@@ -519,11 +534,35 @@ class SocketioController extends GetxController {
 
 //WEBRTC
 
-  void removeNonMatchingUsers(List<User> tempuserlist) {
-    for (var group in groups.value!) {
-      // group içindeki memberUserList'i tempUserList ile kıyasla
-      group.groupmembers!
-          .removeWhere((element) => !tempuserlist.contains(element.user.value));
+  void initgroup() {
+    // Tüm grupları dolaş
+    for (var groupfetch in groups.value!) {
+      //
+      // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
+      groupfetch.groupmembers ??= RxList<Groupmember>();
+
+      //Eğer Grup Odaları null ise bir Listeye dönüştür
+      groupfetch.rooms ??= RxList<Room>();
+    }
+  }
+
+  void removeNonMatchingUsers(
+      Group group, List<Map<User, Room?>> groupCurrentmemberList) {
+    // groupCurrentmemberList içindeki User'ları bir sete dönüştür
+    var currentUsers =
+        groupCurrentmemberList.map((entry) => entry.keys.first).toSet();
+
+    // Aktif Olmayan Kullanıcıları Grupta Çevrimdışı Yap
+    group.groupmembers!.removeWhere(
+      (element) => !currentUsers
+          .any((user) => user.username == element.user.value.username),
+    );
+
+    for (Room rooms in group.rooms!) {
+      rooms.currentMembers.removeWhere(
+        (element) =>
+            !currentUsers.any((user) => user.username == element.username),
+      );
     }
   }
 
@@ -542,12 +581,12 @@ class SocketioController extends GetxController {
     RTCSessionDescription offer = await _rtcPeerConnection!.createOffer();
     await _rtcPeerConnection!.setLocalDescription(offer);
 
-    RTCSessionDescription answer = await _rtcPeerConnection!.createAnswer();
+    // RTCSessionDescription answer = await _rtcPeerConnection!.createAnswer();
 
     // set SDP offer as remoteDescription for peerConnection
-    await _rtcPeerConnection!.setRemoteDescription(
-      RTCSessionDescription(offer.toMap()["sdp"], offer.toMap()["type"]),
-    );
+    // await _rtcPeerConnection!.setRemoteDescription(
+    //   RTCSessionDescription(offer.toMap()["sdp"], offer.toMap()["type"]),
+    // );
 
     socket.emit("CALL_USER", {user.username, offer.toMap()});
   }

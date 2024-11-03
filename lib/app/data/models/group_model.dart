@@ -289,7 +289,7 @@ class Group {
                   children: [
                     Obx(
                       () => socketio.isInRoom(this) != true
-                          ? Container()
+                          ? Expanded(child: Container())
                           : Expanded(
                               child: Column(
                                 children: [
