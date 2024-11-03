@@ -197,7 +197,7 @@ class SocketioController extends GetxController {
     });
 
     // Her 1 saniyede bir kullanıcı listesini iste
-    startFetchingUserList(const Duration(seconds: 1));
+    // startFetchingUserList(const Duration(seconds: 1));
     // Her 1 saniyede bir kullanıcı listesini iste
 
     startPing(const Duration(seconds: 2));
@@ -615,9 +615,11 @@ class SocketioController extends GetxController {
     });
   }
 
-  void fetchUserList() {
+  void fetchUserList({int? groupID}) {
     // Sunucudan kullanıcı listesi isteme
-    socket.emit('USER_LIST');
+    socket.emit('USER_LIST', {
+      "groupID": groupID,
+    });
   }
 
   void startPing(Duration interval) {
@@ -707,11 +709,11 @@ class SocketioController extends GetxController {
   }
 
 ////////
-  void startFetchingUserList(Duration interval) {
-    userListTimer = Timer.periodic(interval, (timer) {
-      fetchUserList();
-    });
-  }
+  // void startFetchingUserList(Duration interval) {
+  //   userListTimer = Timer.periodic(interval, (timer) {
+  //     fetchUserList();
+  //   });
+  // }
 
   void stopFetchingUserList() {
     // Timer durdurma (iptal etme)

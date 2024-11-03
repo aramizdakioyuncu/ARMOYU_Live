@@ -59,6 +59,11 @@ class HomeView extends StatelessWidget {
                                 onTap: () {
                                   pageController.jumpToPage(index + 1);
                                   selectedPage.value = index + 1;
+
+                                  final groupID = AppList.groups[index].groupID;
+
+                                  // TODO: socket emit
+                                  socketio.fetchUserList(groupID: groupID);
                                 },
                                 child: Stack(
                                   alignment: Alignment.center,
