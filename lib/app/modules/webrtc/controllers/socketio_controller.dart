@@ -190,14 +190,14 @@ class SocketioController extends GetxController {
 
   main() {
     // Socket.IO'ya bağlanma
-    // socket = IO.io('http://mc.armoyu.com:2021', <String, dynamic>{
-    socket = IO.io('http://localhost:2021', <String, dynamic>{
+    socket = IO.io('http://mc.armoyu.com:2021', <String, dynamic>{
+      // socket = IO.io('http://localhost:2021', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
 
     // Her 1 saniyede bir kullanıcı listesini iste
-    // startFetchingUserList(const Duration(seconds: 1));
+    startFetchingUserList(const Duration(minutes: 1));
     // Her 1 saniyede bir kullanıcı listesini iste
 
     startPing(const Duration(seconds: 2));
@@ -357,6 +357,10 @@ class SocketioController extends GetxController {
         var json = jsonDecode(data);
 
         log("${socketPREFIX}Member Count ${json.length}");
+
+        //Grup Odaları ve Üyelerini reset yapar
+        groups.value = AppList.groups;
+        resetgroup();
 
         List<Map<User, Room?>> tmpUserList = [];
 
@@ -546,6 +550,15 @@ class SocketioController extends GetxController {
     }
   }
 
+  void resetgroup() {
+    // Tüm grupları dolaş
+    for (var groupfetch in groups.value!) {
+      //
+      // Eğer groupmembers null veya boşsa, yeni bir RxList oluştur
+      groupfetch.groupmembers = RxList<Groupmember>();
+    }
+  }
+
   void removeNonMatchingUsers(
       Group group, List<Map<User, Room?>> groupCurrentmemberList) {
     // groupCurrentmemberList içindeki User'ları bir sete dönüştür
@@ -612,6 +625,7 @@ class SocketioController extends GetxController {
     socket.emit('REGISTER', {
       'name': name,
       'clientId': clientId,
+      "groups": AppList.groups.map((g) => g.groupID).toList(),
     });
   }
 
@@ -709,11 +723,13 @@ class SocketioController extends GetxController {
   }
 
 ////////
-  // void startFetchingUserList(Duration interval) {
-  //   userListTimer = Timer.periodic(interval, (timer) {
-  //     fetchUserList();
-  //   });
-  // }
+  void startFetchingUserList(Duration interval) {
+    fetchUserList();
+
+    userListTimer = Timer.periodic(interval, (timer) {
+      fetchUserList();
+    });
+  }
 
   void stopFetchingUserList() {
     // Timer durdurma (iptal etme)
