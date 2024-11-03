@@ -39,8 +39,6 @@ class HomeView extends StatelessWidget {
                 ElevatedButton(
                   child: const Text('Oluştur'),
                   onPressed: () {
-                    
-
                     AppList.groups.add(
                       Group(
                         rooms: <Room>[].obs,
@@ -127,7 +125,7 @@ class HomeView extends StatelessWidget {
                                     final groupID =
                                         AppList.groups[index].groupID;
 
-                                    // TODO: socket emit
+                                    // TODO: socket emit lalal
                                     socketio.fetchUserList(groupID: groupID);
                                   },
                                   child: Stack(
