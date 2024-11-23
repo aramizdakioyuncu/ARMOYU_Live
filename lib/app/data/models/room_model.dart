@@ -114,14 +114,13 @@ class Room {
                   leading: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       color: socketio.isSoundStreaming.value == true
                           ? Colors.amber
-                          : Colors.grey,
-                      borderRadius: BorderRadius.circular(
-                        50,
-                      ),
+                          : Colors.transparent,
                     ),
                     child: CircleAvatar(
+                      backgroundColor: Colors.transparent,
                       foregroundImage: CachedNetworkImageProvider(
                         currentMembers[index].avatar!.minUrl.toString(),
                       ),

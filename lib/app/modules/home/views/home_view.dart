@@ -10,6 +10,7 @@ import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:window_manager/window_manager.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -39,8 +40,6 @@ class HomeView extends StatelessWidget {
                 ElevatedButton(
                   child: const Text('Oluştur'),
                   onPressed: () {
-                    
-
                     AppList.groups.add(
                       Group(
                         rooms: <Room>[].obs,
@@ -76,163 +75,294 @@ class HomeView extends StatelessWidget {
     var selectedPage = 0.obs;
     final pageController = PageController(initialPage: selectedPage.value);
     final socketio = Get.put(SocketioController());
+    var isHoveredClose = false.obs;
 
     return Scaffold(
       body: Stack(
         children: [
-          Row(
+          Column(
             children: [
-              Container(
-                color: const Color.fromARGB(255, 21, 21, 21),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
+              GestureDetector(
+                onPanUpdate: (details) {
+                  windowManager.startDragging();
+                },
+                child: Container(
+                  color: Colors.transparent,
+                  height: 35,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5.0),
-                        child: InkWell(
-                          onTap: () {
-                            pageController.jumpToPage(0);
-                            selectedPage.value = 0;
-                          },
-                          child: const CircleAvatar(
-                            backgroundColor: Colors.transparent,
-                            foregroundImage: CachedNetworkImageProvider(
-                              "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
+                      const Row(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Icon(
+                              Icons.abc,
+                              color: Colors.amber,
                             ),
                           ),
-                        ),
+                          Text(
+                            "Sürüklenebilir Pencere",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        height: 2,
-                        width: 20,
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      Obx(() {
-                        return Column(
-                          children: List.generate(
-                            AppList.groups.length,
-                            (index) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 5.0),
-                                child: InkWell(
-                                  onTap: () {
-                                    pageController.jumpToPage(index + 1);
-                                    selectedPage.value = index + 1;
-
-                                    final groupID =
-                                        AppList.groups[index].groupID;
-
-                                    // TODO: socket emit
-                                    socketio.fetchUserList(groupID: groupID);
-                                  },
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Column(
-                                        children: [
-                                          const SizedBox(width: 50),
-                                          CircleAvatar(
-                                            backgroundColor: Colors.transparent,
-                                            foregroundImage:
-                                                CachedNetworkImageProvider(
-                                              AppList.groups[index].logo.minUrl,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Positioned(
-                                        left: -3,
-                                        child: Container(
-                                          height: 6,
-                                          width: 6,
-                                          decoration: BoxDecoration(
-                                            color:
-                                                selectedPage.value - 1 == index
-                                                    ? Colors.red
-                                                    : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              5,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          IconButton(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            icon: const Icon(
+                              Icons.remove,
+                              color: Colors.white,
+                              size: 19,
+                            ),
+                            style: const ButtonStyle(
+                              shape: WidgetStatePropertyAll(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
                                 ),
-                              );
+                              ),
+                            ),
+                            onPressed: () async {
+                              windowManager.minimize();
                             },
                           ),
-                        );
-                      }),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade900,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: IconButton(
-                            onPressed: () {},
+                          IconButton(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             icon: const Icon(
-                              Icons.search,
+                              Icons.crop_square,
                               color: Colors.white,
+                              size: 16,
                             ),
+                            style: const ButtonStyle(
+                              shape: WidgetStatePropertyAll(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                              ),
+                            ),
+                            onPressed: () async {
+                              bool isMaximized =
+                                  await windowManager.isMaximized();
+                              if (isMaximized) {
+                                windowManager
+                                    .unmaximize(); // Pencereyi normale döndür
+                              } else {
+                                windowManager
+                                    .maximize(); // Pencereyi tam ekran yap
+                              }
+                            },
                           ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5.0),
-                        child: InkWell(
-                          onTap: () {
-                            _showAlertDialog(context, socketio);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade900,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: IconButton(
-                              onPressed: () {
-                                _showAlertDialog(context, socketio);
-
-                                log("sadasdsa");
-                              },
-                              icon: const Icon(
-                                Icons.add,
-                                color: Colors.white,
+                          MouseRegion(
+                            onEnter: (_) {
+                              isHoveredClose.value = true;
+                            },
+                            onExit: (_) {
+                              isHoveredClose.value = false;
+                            },
+                            child: Obx(
+                              () => IconButton(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 14),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStatePropertyAll(
+                                    isHoveredClose.value
+                                        ? Colors.red
+                                        : Colors.transparent,
+                                  ),
+                                  shape: const WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  windowManager.close();
+                                },
                               ),
                             ),
                           ),
-                        ),
-                      ),
+                        ],
+                      )
                     ],
                   ),
                 ),
               ),
               Expanded(
-                child: Obx(() {
-                  return PageView(
-                    controller: pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (value) {
-                      selectedPage.value = value;
-                    },
-                    children: [
-                      const HomepageView(),
-                      ...List.generate(
-                        AppList.groups.length,
-                        (index) {
-                          return AppList.groups[index].pageDetail(context);
-                        },
-                      )
-                    ],
-                  );
-                }),
+                child: Row(
+                  children: [
+                    Container(
+                      color: const Color.fromARGB(255, 21, 21, 21),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 5.0),
+                              child: InkWell(
+                                onTap: () {
+                                  pageController.jumpToPage(0);
+                                  selectedPage.value = 0;
+                                },
+                                child: const CircleAvatar(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundImage: CachedNetworkImageProvider(
+                                    "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              height: 2,
+                              width: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            Obx(() {
+                              return Column(
+                                children: List.generate(
+                                  AppList.groups.length,
+                                  (index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 5.0),
+                                      child: InkWell(
+                                        onTap: () {
+                                          pageController.jumpToPage(index + 1);
+                                          selectedPage.value = index + 1;
+
+                                          final groupID =
+                                              AppList.groups[index].groupID;
+
+                                          // TODO: socket emit
+                                          socketio.fetchUserList(
+                                              groupID: groupID);
+                                        },
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Column(
+                                              children: [
+                                                const SizedBox(width: 50),
+                                                CircleAvatar(
+                                                  backgroundColor:
+                                                      Colors.transparent,
+                                                  foregroundImage:
+                                                      CachedNetworkImageProvider(
+                                                    AppList.groups[index].logo
+                                                        .minUrl,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Positioned(
+                                              left: -3,
+                                              child: Container(
+                                                height: 6,
+                                                width: 6,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      selectedPage.value - 1 ==
+                                                              index
+                                                          ? Colors.red
+                                                          : Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    5,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            }),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 5.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade900,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: const Icon(
+                                    Icons.search,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 5.0),
+                              child: InkWell(
+                                onTap: () {
+                                  _showAlertDialog(context, socketio);
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade900,
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      _showAlertDialog(context, socketio);
+
+                                      log("sadasdsa");
+                                    },
+                                    icon: const Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Obx(() {
+                        return PageView(
+                          controller: pageController,
+                          physics: const NeverScrollableScrollPhysics(),
+                          onPageChanged: (value) {
+                            selectedPage.value = value;
+                          },
+                          children: [
+                            const HomepageView(),
+                            ...List.generate(
+                              AppList.groups.length,
+                              (index) {
+                                return AppList.groups[index]
+                                    .pageDetail(context);
+                              },
+                            )
+                          ],
+                        );
+                      }),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -258,7 +388,12 @@ class HomeView extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.start,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const CircleAvatar(
+                                CircleAvatar(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundImage: CachedNetworkImageProvider(
+                                    AppList.sessions.first.currentUser.avatar!
+                                        .minUrl,
+                                  ),
                                   maxRadius: 16,
                                 ),
                                 const SizedBox(width: 5),

@@ -89,6 +89,7 @@ class HomepageView extends StatelessWidget {
         Expanded(
           child: PageView(
             scrollDirection: Axis.vertical,
+            physics: const NeverScrollableScrollPhysics(),
             controller: pageviewController.value,
             onPageChanged: (value) {
               homeSelectedPage.value = value;

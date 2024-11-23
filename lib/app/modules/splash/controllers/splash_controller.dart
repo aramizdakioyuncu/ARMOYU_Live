@@ -5,7 +5,7 @@ class SplashController extends GetxController {
   void onInit() {
     super.onInit();
 
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(seconds: 2), () {
       Get.toNamed("/login");
     });
   }

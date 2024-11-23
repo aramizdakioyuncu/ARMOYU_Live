@@ -136,6 +136,7 @@ class Bottomusermenu {
             ListTile(
               minTileHeight: 0,
               leading: CircleAvatar(
+                  backgroundColor: Colors.transparent,
                   foregroundImage: CachedNetworkImageProvider(
                     user.avatar!.minUrl.toString(),
                   ),

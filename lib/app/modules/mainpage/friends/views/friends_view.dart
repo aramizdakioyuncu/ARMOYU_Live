@@ -1,3 +1,6 @@
+import 'package:armoyu_desktop/app/modules/mainpage/friends/controllers/friends_controller.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -7,6 +10,8 @@ class FriendsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var selectedMenuItem = 0.obs;
+
+    final controller = Get.put(FriendsController());
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -113,30 +118,86 @@ class FriendsView extends StatelessWidget {
                         "Bir Arkadaşını ARMOYU Etiketi ile ekleyebilirsin.",
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                  ),
                                 ),
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {},
-                              child: const Text("Arkadaşlık İsteği Gönder"),
-                            ),
-                          ],
+                              ElevatedButton(
+                                onPressed: () {},
+                                child: const Text("Arkadaşlık İsteği Gönder"),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    )
+                    ),
+                    Obx(
+                      () => Expanded(
+                        child: controller.friendlist.isEmpty
+                            ? const Center(
+                                child: CupertinoActivityIndicator(),
+                              )
+                            : SingleChildScrollView(
+                                controller: controller.scrollController.value,
+                                child: Column(
+                                  children: List.generate(
+                                    controller.friendlist.length,
+                                    (index) {
+                                      return ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: Colors.transparent,
+                                          foregroundImage:
+                                              CachedNetworkImageProvider(
+                                            controller.friendlist[index].avatar!
+                                                .minUrl,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          controller
+                                              .friendlist[index].displayname!,
+                                        ),
+                                        subtitle: Text(
+                                          controller
+                                              .friendlist[index].displayname!,
+                                        ),
+                                        trailing: IconButton(
+                                          onPressed: () {},
+                                          icon: const Icon(
+                                            Icons.remove_circle_outline_sharp,
+                                          ),
+                                        ),
+                                        onTap: () {},
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                    Obx(
+                      () => controller.isLoadingMoreProccess.value
+                          ? const SizedBox(
+                              height: 100,
+                              child: Center(
+                                child: CupertinoActivityIndicator(),
+                              ),
+                            )
+                          : Container(),
+                    ),
                   ],
                 )
               ],

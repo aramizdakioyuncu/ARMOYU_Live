@@ -7,6 +7,7 @@ class User {
   String? firstname;
   String? lastname;
   String? username;
+  String? password;
   String? displayname;
   String? email;
   String? phonenumber;
@@ -25,6 +26,7 @@ class User {
     this.firstname,
     this.lastname,
     this.username,
+    this.password,
     this.displayname,
     this.email,
     this.phonenumber,
@@ -47,6 +49,7 @@ class User {
       'firstname': firstname,
       'lastname': lastname,
       'username': username,
+      'password': password,
       'displayname': displayname,
       'email': email,
       'phonenumber': phonenumber,
@@ -66,6 +69,7 @@ class User {
       firstname: json['firstname'],
       lastname: json['lastname'],
       username: json['username'],
+      password: json['password'],
       displayname: json['displayname'],
       email: json['email'],
       phonenumber: json['phonenumber'],
