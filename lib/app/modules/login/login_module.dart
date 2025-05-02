@@ -1,4 +1,3 @@
-import 'package:armoyu_desktop/app/modules/login/bindings/login_binding.dart';
 import 'package:armoyu_desktop/app/modules/login/views/login_view.dart';
 import 'package:get/get.dart';
 
@@ -9,7 +8,6 @@ class LoginModule {
     GetPage(
       name: route,
       page: () => const LoginView(),
-      binding: LoginBinding(),
     ),
   ];
 }

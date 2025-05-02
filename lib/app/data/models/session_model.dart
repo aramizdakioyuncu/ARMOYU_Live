@@ -1,7 +1,7 @@
-import 'package:armoyu_desktop/app/data/models/user_model.dart';
+import 'package:armoyu_desktop/app/data/models/player_model.dart';
 
 class Session {
-  final User currentUser;
+  final Player currentUser;
 
   Session({
     required this.currentUser,

@@ -1,6 +1,4 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
-import 'package:armoyu_desktop/app/data/models/media_model.dart';
-import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/data/models/session_model.dart';
 import 'package:armoyu_desktop/app/data/models/settingslist_model.dart';
 import 'package:armoyu_desktop/app/modules/settings/accounts/views/settings_account_view.dart';
@@ -112,40 +110,5 @@ class AppList {
     ),
   ];
   static List<Session> sessions = [];
-  static RxList<Group> groups = <Group>[
-    Group(
-      groupID: 1,
-      logo: Media(
-        id: 1,
-        type: MediaType.image,
-        bigUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQFHdXQAFtbcvJ_VPNceUnHZFMyj2jAb0c8A&s",
-        normalUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQFHdXQAFtbcvJ_VPNceUnHZFMyj2jAb0c8A&s",
-        minUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQFHdXQAFtbcvJ_VPNceUnHZFMyj2jAb0c8A&s",
-        isLocal: false,
-      ),
-      name: "Gruplarsa",
-      description: "masdçdçaks",
-      rooms: <Room>[].obs,
-    ),
-    Group(
-      groupID: 2,
-      logo: Media(
-        id: 1,
-        type: MediaType.image,
-        bigUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDtoIAiZC5QTHvKawK5E5pRexfBUEKiJQoIA&s",
-        normalUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDtoIAiZC5QTHvKawK5E5pRexfBUEKiJQoIA&s",
-        minUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDtoIAiZC5QTHvKawK5E5pRexfBUEKiJQoIA&s",
-        isLocal: false,
-      ),
-      name: "Gta V Online",
-      description: "masdçdçaks",
-      rooms: <Room>[].obs,
-    ),
-  ].obs;
+  static RxList<Group> groups = <Group>[].obs;
 }

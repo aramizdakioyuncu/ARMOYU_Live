@@ -2,7 +2,7 @@ name: armoyu_desktop
 description: "A new Flutter project."
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ">=3.4.4 <4.0.0"
@@ -12,20 +12,17 @@ dependencies:
     sdk: flutter
 
   get: ^4.6.6
-  armoyu_services: ^1.0.0+7
+  armoyu_services: ^1.0.0+55
+  armoyu_widgets: ^1.0.0+76
+
   socket_io_client: ^3.0.0
-  flutter_webrtc: ^0.11.7
+  flutter_webrtc: ^0.12.12
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.6
   permission_handler: ^11.3.1
-  flutter_background: ^1.0.0
-  uuid: ^4.5.1
-  # camera: ^0.8.1
-  # image: ^3.0.2
-  # rxdart: ^0.28.0
+
   audioplayers: ^6.1.0
-  msix: ^3.16.8
-  # //Windows
+  record: ^5.2.1
   window_manager: ^0.4.3
 
 dev_dependencies:

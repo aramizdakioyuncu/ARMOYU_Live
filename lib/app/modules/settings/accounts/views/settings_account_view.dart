@@ -1,6 +1,8 @@
+import 'package:armoyu_desktop/app/services/armoyu_services.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class SettingsAccountView extends StatelessWidget {
   const SettingsAccountView({super.key});
@@ -27,7 +29,8 @@ class SettingsAccountView extends StatelessWidget {
                         padding: const EdgeInsets.all(8.0),
                         child: CircleAvatar(
                           foregroundImage: CachedNetworkImageProvider(
-                            AppList.sessions.first.currentUser.avatar!.minUrl,
+                            AppList.sessions.first.currentUser.user.avatar!
+                                .mediaURL.minURL.value,
                           ),
                           radius: 50,
                         ),
@@ -46,7 +49,7 @@ class SettingsAccountView extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              "${AppList.sessions.first.currentUser.username} #${AppList.sessions.first.currentUser.id}",
+                              "${AppList.sessions.first.currentUser.user.userName!.value} #${AppList.sessions.first.currentUser.user.userID}",
                             ),
                             const SizedBox(height: 15),
                             const Text(
@@ -54,7 +57,8 @@ class SettingsAccountView extends StatelessWidget {
                               style: TextStyle(color: Colors.grey),
                             ),
                             Text(
-                              AppList.sessions.first.currentUser.email
+                              AppList.sessions.first.currentUser.user
+                                  .detailInfo!.value!.email
                                   .toString(),
                             ),
                           ],
@@ -67,6 +71,21 @@ class SettingsAccountView extends StatelessWidget {
                           onPressed: () {},
                           child: const Text(
                             "Düzenle",
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: () async {
+                            await ARMOYU.service.authServices.logOut();
+                            Get.offAndToNamed("/login");
+                          },
+                          child: const Text(
+                            "Çıkış",
                           ),
                         ),
                       ),
