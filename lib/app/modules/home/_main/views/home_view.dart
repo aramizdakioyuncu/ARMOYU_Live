@@ -105,7 +105,7 @@ class HomeView extends StatelessWidget {
                                 child: const CircleAvatar(
                                   backgroundColor: Colors.transparent,
                                   foregroundImage: CachedNetworkImageProvider(
-                                    "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
+                                    "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
                                   ),
                                 ),
                               ),

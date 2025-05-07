@@ -16,7 +16,7 @@ class SplashView extends StatelessWidget {
           children: [
             CachedNetworkImage(
               imageUrl:
-                  "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
+                  "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
             ),
             const SizedBox(height: 10),
             const CircularProgressIndicator(

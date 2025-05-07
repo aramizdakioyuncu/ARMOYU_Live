@@ -225,7 +225,7 @@ class ProfileWidget {
                                                   leading: const CircleAvatar(
                                                     foregroundImage:
                                                         CachedNetworkImageProvider(
-                                                            "https://aramizdakioyuncu.com/galeri/profilresimleri/10954profilresimufaklik1652701456.jpg"),
+                                                            "https://api.aramizdakioyuncu.com/galeri/profilresimleri/10954profilresimufaklik1652701456.jpg"),
                                                   ),
                                                   title: const Text(
                                                     "nero",
@@ -272,7 +272,7 @@ class ProfileWidget {
                                                       width: 40,
                                                       fit: BoxFit.cover,
                                                       imageUrl:
-                                                          "https://aramizdakioyuncu.com/galeri/profilresimleri/1profilresimufaklik1734874339.jpg",
+                                                          "https://api.aramizdakioyuncu.com/galeri/profilresimleri/1profilresimufaklik1734874339.jpg",
                                                     ),
                                                   ),
                                                   title: const Text(

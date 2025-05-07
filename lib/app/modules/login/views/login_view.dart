@@ -26,7 +26,7 @@ class LoginView extends StatelessWidget {
                   children: [
                     CachedNetworkImage(
                       imageUrl:
-                          "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
+                          "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu64.png",
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),

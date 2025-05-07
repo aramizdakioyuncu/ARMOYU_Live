@@ -51,7 +51,7 @@ class MessageWidget {
                       return CachedNetworkImage(
                         fit: BoxFit.contain,
                         imageUrl:
-                            "https://aramizdakioyuncu.com/galeri/profilresimleri/11357profilresimufaklik1668362839.webp",
+                            "https://api.aramizdakioyuncu.com/galeri/profilresimleri/11357profilresimufaklik1668362839.webp",
                       );
                     },
                   ),

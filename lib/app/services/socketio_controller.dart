@@ -915,13 +915,13 @@ class SocketioControllerV2 extends GetxController {
                 mediaType: MediaType.image,
                 mediaURL: MediaURL(
                   bigURL: Rx(
-                    "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
+                    "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
                   ),
                   normalURL: Rx(
-                    "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
+                    "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
                   ),
                   minURL: Rx(
-                    "https://aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
+                    "https://api.aramizdakioyuncu.com/galeri/ana-yapi/armoyu.png",
                   ),
                 ),
               ),
