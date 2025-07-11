@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:armoyu_desktop/app/services/armoyu_services.dart';
 import 'package:armoyu_desktop/app/utils/app.dart';
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/foundation.dart'; // kIsWeb için
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  //Video
+  MediaKit.ensureInitialized();
   initializeWindowManager();
 
   await ARMOYU.service.setup();

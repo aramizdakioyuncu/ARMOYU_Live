@@ -1,4 +1,5 @@
 import 'package:armoyu_desktop/app/data/models/player_model.dart';
+import 'package:armoyu_desktop/app/services/armoyu_services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -108,7 +109,7 @@ class ProfileWidget {
                       const SizedBox(height: 15),
                       Expanded(
                         child: DefaultTabController(
-                          length: 4, // Sekme sayısı
+                          length: 5, // Sekme sayısı
 
                           child: Column(
                             children: [
@@ -118,6 +119,7 @@ class ProfileWidget {
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 tabs: [
                                   Tab(text: "Hakkımda"),
+                                  Tab(text: "Galeri"),
                                   Tab(text: "Etkinlik"),
                                   Tab(text: "Arkadaşlar"),
                                   Tab(text: "Sunucular"),
@@ -155,6 +157,12 @@ class ProfileWidget {
                                           ],
                                         ),
                                       ),
+                                      ARMOYU.widget.gallery
+                                          .mediaGallery(
+                                              context: context,
+                                              userID: user.user.userID)
+                                          .widget
+                                          .value!,
                                       ListView(
                                         children: List.generate(
                                           10,
@@ -225,7 +233,7 @@ class ProfileWidget {
                                                   leading: const CircleAvatar(
                                                     foregroundImage:
                                                         CachedNetworkImageProvider(
-                                                            "https://api.aramizdakioyuncu.com/galeri/profilresimleri/10954profilresimufaklik1652701456.jpg"),
+                                                            "https://storage.aramizdakioyuncu.com/galeri/profilresimleri/10954profilresimufaklik1652701456.jpg"),
                                                   ),
                                                   title: const Text(
                                                     "nero",
@@ -272,7 +280,7 @@ class ProfileWidget {
                                                       width: 40,
                                                       fit: BoxFit.cover,
                                                       imageUrl:
-                                                          "https://api.aramizdakioyuncu.com/galeri/profilresimleri/1profilresimufaklik1734874339.jpg",
+                                                          "https://storage.aramizdakioyuncu.com/galeri/profilresimleri/1profilresimufaklik1734874339.jpg",
                                                     ),
                                                   ),
                                                   title: const Text(

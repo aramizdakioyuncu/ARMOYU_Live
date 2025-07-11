@@ -12,14 +12,19 @@ dependencies:
     sdk: flutter
 
   get: ^4.6.6
-  armoyu_services: ^1.0.0+57
-  armoyu_widgets: ^1.0.0+78
+  armoyu_services: ^1.0.0+66
+  armoyu_widgets: ^1.0.0+91
 
   socket_io_client: ^3.0.0
   flutter_webrtc: ^0.14.0
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.6
   permission_handler: ^12.0.0+1
+
+  media_kit: ^1.1.11 # Primary package.
+  media_kit_video: ^1.2.5 # For video rendering.
+  media_kit_libs_video: ^1.0.5 # Native video dependencies.
+
 
   audioplayers: ^6.1.0
   record: ^6.0.0
