@@ -387,8 +387,14 @@ class SocketioControllerV2 extends GetxController {
             destRoom = room;
           }
 
-          Groupmember groupMember = group.groupmembers!.firstWhere(
+          // Üye listede yoksa ekle
+          Groupmember? groupMember = group.groupmembers!.firstWhereOrNull(
               (gm) => gm.user.value.user.userID == user.user.userID);
+          if (groupMember == null) {
+            groupMember =
+                Groupmember(user: user.obs, description: '-', status: 0);
+            group.groupmembers!.add(groupMember);
+          }
           groupMember.currentRoom.value = destRoom;
 
           if (user.user.userID == currentUserId) {
@@ -403,9 +409,9 @@ class SocketioControllerV2 extends GetxController {
             destRoom = room;
           }
 
-          Groupmember groupMember = group.groupmembers!.firstWhere(
+          Groupmember? groupMember = group.groupmembers!.firstWhereOrNull(
               (gm) => gm.user.value.user.userID == user.user.userID);
-          groupMember.currentRoom.value = null;
+          groupMember?.currentRoom.value = null;
           destRoom.removeUserFromRooms(user);
         }
 
@@ -482,8 +488,45 @@ class SocketioControllerV2 extends GetxController {
         final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
         final bool micMuted = data['micMuted'] ?? false;
         final bool speakerOff = data['speakerOff'] ?? false;
-        _updateUserMicState(user.user.userID!, !micMuted);
-        _updateUserSpeakerState(user.user.userID!, !speakerOff);
+        user.microphone.value = !micMuted;
+        user.speaker.value = !speakerOff;
+
+        if (user.user.userID == null) return;
+
+        for (final group in groups.value ?? []) {
+          // Üyeyi groupmembers'a ekle/güncelle
+          Groupmember? gm = group.groupmembers?.firstWhereOrNull(
+              (m) => m.user.value.user.userID == user.user.userID);
+          if (gm == null) {
+            gm = Groupmember(user: user.obs, description: '-', status: 0);
+            group.groupmembers?.add(gm);
+          } else {
+            gm.user.value.microphone.value = user.microphone.value;
+            gm.user.value.speaker.value = user.speaker.value;
+          }
+
+          // Kullanıcıyı odanın currentMembers listesine ekle
+          for (final room in group.rooms ?? []) {
+            if (room.currentMembers
+                .any((m) => m.user.userID == user.user.userID)) {
+              continue;
+            }
+            // Bu odaya mı katıldı? data['room'] varsa karşılaştır
+            final rawRoom = data['room'];
+            if (rawRoom != null) {
+              final joinedRoomID =
+                  (rawRoom['roomUUID'] ?? rawRoom['roomID']) as int?;
+              if (joinedRoomID != null && room.roomID == joinedRoomID) {
+                room.currentMembers.add(user);
+                gm.currentRoom.value = room;
+              }
+            }
+          }
+
+          group.groupmembers?.refresh();
+          group.rooms?.refresh();
+        }
+        groups.refresh();
         log('${socketPREFIX}Kanala katıldı: ${user.user.displayName?.value}');
       } catch (e) {
         log('${socketPREFIX}Hata (channel_user_joined): $e');
@@ -494,7 +537,22 @@ class SocketioControllerV2 extends GetxController {
     socket.on('channel_user_left', (data) {
       try {
         final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        if (user.user.userID == null) return;
+
         _updateUserSpeaking(user.user.userID!, false);
+
+        for (final group in groups.value ?? []) {
+          final gm = group.groupmembers?.firstWhereOrNull(
+              (m) => m.user.value.user.userID == user.user.userID);
+          gm?.currentRoom.value = null;
+          for (final room in group.rooms ?? []) {
+            room.currentMembers.removeWhere(
+                (m) => m.user.userID == user.user.userID);
+          }
+          group.groupmembers?.refresh();
+          group.rooms?.refresh();
+        }
+        groups.refresh();
         log('${socketPREFIX}Kanaldan ayrıldı: ${user.user.displayName?.value}');
       } catch (e) {
         log('${socketPREFIX}Hata (channel_user_left): $e');
