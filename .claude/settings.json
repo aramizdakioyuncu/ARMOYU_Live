@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(gh repo view aramizdakioyuncu/socket_ARMOYU_Live --json description,name,url)",
+      "WebFetch(domain:api.github.com)",
+      "Read(//c/Users/PC/**)",
+      "PowerShell(gh repo view aramizdakioyuncu/socket_ARMOYU_Live 2>&1)",
+      "PowerShell(git clone https://github.com/aramizdakioyuncu/socket_ARMOYU_Live.git C:\\\\Users\\\\PC\\\\socket_ARMOYU_Live 2>&1)",
+      "PowerShell(Set-Location C:\\\\Users\\\\PC\\\\socket_ARMOYU_Live; $job = Start-Job { node C:\\\\Users\\\\PC\\\\socket_ARMOYU_Live\\\\index.js 2>&1 }; Start-Sleep 3; Receive-Job $job; Stop-Job $job; Remove-Job $job)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\PC\\socket_ARMOYU_Live\\constants",
+      "C:\\Users\\PC\\socket_ARMOYU_Live"
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+enum APIChat { ozel, grup }
