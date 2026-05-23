@@ -44,7 +44,7 @@ class Room {
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
       groupID: json['groupID'], // Group nesnesini JSON'dan oluştur
-      roomID: json['roomUUID'], // Group nesnesini JSON'dan oluştur
+      roomID: (json['roomUUID'] ?? json['roomID']) as int,
       name: json['name'],
       limit: json['limit'],
       type: RoomType.values[json['type']], // RoomType'ı enum'dan almak için

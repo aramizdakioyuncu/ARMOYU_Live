@@ -99,14 +99,14 @@ class SocketioControllerV2 extends GetxController {
 
       for (var mic in microphones) {
         if (kDebugMode) {
-          print("Microphone: ${mic.label} ${mic.deviceId}");
+          log("Microphone: ${mic.label} ${mic.deviceId}");
         }
       }
 
       return microphones;
     } catch (e) {
       if (kDebugMode) {
-        print("Error listing microphones: $e");
+        log("Error listing microphones: $e");
       }
     }
     return null;
@@ -144,11 +144,11 @@ class SocketioControllerV2 extends GetxController {
       });
 
       if (kDebugMode) {
-        print("Using new microphone: $deviceId");
+        log("Using new microphone: $deviceId");
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Error selecting microphone: $e");
+        log("Error selecting microphone: $e");
       }
     }
   }
@@ -219,7 +219,7 @@ class SocketioControllerV2 extends GetxController {
     socket.on('signaling', (data) {
       // Signaling verilerini dinleme
       if (kDebugMode) {
-        print('Signaling verisi alındı: $data');
+        log('Signaling verisi alındı: $data');
       }
     });
 
@@ -228,7 +228,7 @@ class SocketioControllerV2 extends GetxController {
     // 'offer' olayını dinle
     socket.on('offer', (data) {
       if (kDebugMode) {
-        print('Received offer');
+        log('Received offer');
       }
       if (data is Map<String, dynamic>) {
         var offer = webrtc.RTCSessionDescription(
@@ -244,7 +244,7 @@ class SocketioControllerV2 extends GetxController {
           homecontroller.createAnswer(offer);
         }).catchError((e) {
           if (kDebugMode) {
-            print("Error setting remote description: $e");
+            log("Error setting remote description: $e");
           }
         });
       }
@@ -253,7 +253,7 @@ class SocketioControllerV2 extends GetxController {
     // 'answer' olayını dinle
     socket.on('answer', (data) async {
       if (kDebugMode) {
-        print('Received answer');
+        log('Received answer');
       }
       // Gelen "answer" ile ilgili işlemler
 
@@ -268,7 +268,7 @@ class SocketioControllerV2 extends GetxController {
         await homecontroller.peerConnection!.setRemoteDescription(answer);
       } catch (e) {
         if (kDebugMode) {
-          print("Error setting remote description for answer: $e");
+          log("Error setting remote description for answer: $e");
         }
       }
     });
@@ -276,7 +276,7 @@ class SocketioControllerV2 extends GetxController {
     // 'candidate' olayını dinle
     socket.on('candidate', (data) async {
       if (kDebugMode) {
-        print('Received candidate: $data');
+        log('Received candidate: $data');
       }
       // Gelen "candidate" ile ilgili işlemler
       var candidate = webrtc.RTCIceCandidate(
@@ -291,7 +291,7 @@ class SocketioControllerV2 extends GetxController {
         await homecontroller.peerConnection!.addCandidate(candidate);
       } catch (e) {
         if (kDebugMode) {
-          print("Error adding candidate: $e");
+          log("Error adding candidate: $e");
         }
       }
       // Gelen "candidate" ile ilgili işlemleri burada yapabilirsiniz
@@ -303,7 +303,7 @@ class SocketioControllerV2 extends GetxController {
       // Signaling verilerini dinleme
 
       if (kDebugMode) {
-        print('Kullanıcı Seni Arıyor: ${data['callerId']}');
+        log('Kullanıcı Seni Arıyor: ${data['callerId']}');
       }
 
       isCallingMe.value = true;
@@ -313,14 +313,14 @@ class SocketioControllerV2 extends GetxController {
     socket.on('CALL_ACCEPTED', (data) {
       // Signaling verilerini dinleme
       if (kDebugMode) {
-        print('Çağrı kabul edildi: $data');
+        log('Çağrı kabul edildi: $data');
       }
     });
 
     socket.on('CALL_CLOSED', (data) {
       // Signaling verilerini dinleme
       if (kDebugMode) {
-        print('Çağrı reddedildi: $data');
+        log('Çağrı reddedildi: $data');
       }
     });
 
@@ -421,7 +421,6 @@ class SocketioControllerV2 extends GetxController {
     // Sunucudan gelen mesajları dinleme
     socket.on('chat', (data) {
       try {
-        // print('Sunucudan gelen ham veri: $data');
         Message mm = Message.fromJson(data);
         log("$socketPREFIX${mm.user.value.user.displayName!.value} - ${mm.message}");
 
@@ -441,19 +440,6 @@ class SocketioControllerV2 extends GetxController {
         log('${socketPREFIX}Hata (chat): $e');
       }
     });
-
-    // // Sunucudan gelen sesleri dinleme
-    // socket.on('audio', (base64Audio) {
-    //   try {
-    //     // print('Sunucudan gelen ham veri: $data');
-    //     Uint8List audioBytes = base64Decode(base64Audio);
-
-    //     // //Çalışıyor Kesik Geliyor
-    //     AudioPlayerService.playBase64Audio(audioBytes);
-    //   } catch (e) {
-    //     log('${socketPREFIX}Hata (chat): $e');
-    //   }
-    // });
 
     List<Uint8List> audioChunks = []; // Ses parçalarını saklamak için liste
     int totalAudioSize = 0; // Toplam ses verisinin boyutu (bytes cinsinden)
@@ -487,6 +473,101 @@ class SocketioControllerV2 extends GetxController {
         }
       } catch (e) {
         log('Hata (audio): $e');
+      }
+    });
+
+    // ─── CHANNEL: kanala katılan kullanıcı ──────────────────────────────────
+    socket.on('channel_user_joined', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final bool micMuted = data['micMuted'] ?? false;
+        final bool speakerOff = data['speakerOff'] ?? false;
+        _updateUserMicState(user.user.userID!, !micMuted);
+        _updateUserSpeakerState(user.user.userID!, !speakerOff);
+        log('${socketPREFIX}Kanala katıldı: ${user.user.displayName?.value}');
+      } catch (e) {
+        log('${socketPREFIX}Hata (channel_user_joined): $e');
+      }
+    });
+
+    // ─── CHANNEL: kanaldan ayrılan kullanıcı ────────────────────────────────
+    socket.on('channel_user_left', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        _updateUserSpeaking(user.user.userID!, false);
+        log('${socketPREFIX}Kanaldan ayrıldı: ${user.user.displayName?.value}');
+      } catch (e) {
+        log('${socketPREFIX}Hata (channel_user_left): $e');
+      }
+    });
+
+    // ─── CHANNEL: kanala katılınca mevcut üye listesi ────────────────────────
+    socket.on('channel_user_list', (data) {
+      try {
+        final List<dynamic> members = data as List<dynamic>;
+        for (final memberData in members) {
+          if (memberData['clientId'] == null) continue;
+          final Player user =
+              Player.fromJson(memberData['clientId'] as Map<String, dynamic>);
+          if (user.user.userID == null) continue;
+          final bool micMuted = memberData['micMuted'] ?? false;
+          final bool speakerOff = memberData['speakerOff'] ?? false;
+          final bool isStreaming = memberData['isStreaming'] ?? false;
+          _updateUserMicState(user.user.userID!, !micMuted);
+          _updateUserSpeakerState(user.user.userID!, !speakerOff);
+          _updateUserSpeaking(user.user.userID!, isStreaming);
+        }
+        log('${socketPREFIX}Kanal üyeleri güncellendi (${members.length} kişi)');
+      } catch (e) {
+        log('${socketPREFIX}Hata (channel_user_list): $e');
+      }
+    });
+
+    // ─── MİC DURUMU değişti ──────────────────────────────────────────────────
+    socket.on('user_mic_state', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final bool micMuted = data['micMuted'] ?? false;
+        if (user.user.userID == null) return;
+        _updateUserMicState(user.user.userID!, !micMuted);
+        log('${socketPREFIX}Mic: ${user.user.displayName?.value} -> ${micMuted ? "MUTED" : "UNMUTED"}');
+      } catch (e) {
+        log('${socketPREFIX}Hata (user_mic_state): $e');
+      }
+    });
+
+    // ─── HOPARLÖR DURUMU değişti ──────────────────────────────────────────────
+    socket.on('user_speaker_state', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final bool speakerOff = data['speakerOff'] ?? false;
+        if (user.user.userID == null) return;
+        _updateUserSpeakerState(user.user.userID!, !speakerOff);
+        log('${socketPREFIX}Speaker: ${user.user.displayName?.value} -> ${speakerOff ? "OFF" : "ON"}');
+      } catch (e) {
+        log('${socketPREFIX}Hata (user_speaker_state): $e');
+      }
+    });
+
+    // ─── SES YAYINI başladı ───────────────────────────────────────────────────
+    socket.on('audio_start', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        if (user.user.userID == null) return;
+        _updateUserSpeaking(user.user.userID!, true);
+      } catch (e) {
+        log('${socketPREFIX}Hata (audio_start): $e');
+      }
+    });
+
+    // ─── SES YAYINI durdu ─────────────────────────────────────────────────────
+    socket.on('audio_stop', (data) {
+      try {
+        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        if (user.user.userID == null) return;
+        _updateUserSpeaking(user.user.userID!, false);
+      } catch (e) {
+        log('${socketPREFIX}Hata (audio_stop): $e');
       }
     });
 
@@ -679,15 +760,66 @@ class SocketioControllerV2 extends GetxController {
     }
   }
 
+  // ─── YARDIMCI: kullanıcı state güncellemeleri ────────────────────────────
+
+  void _updateUserMicState(int userID, bool micActive) {
+    if (groups.value == null) return;
+    for (final group in groups.value!) {
+      for (final member in group.groupmembers ?? []) {
+        if (member.user.value.user.userID == userID) {
+          member.user.value.microphone.value = micActive;
+          group.groupmembers?.refresh();
+        }
+      }
+    }
+    groups.refresh();
+  }
+
+  void _updateUserSpeakerState(int userID, bool speakerOn) {
+    if (groups.value == null) return;
+    for (final group in groups.value!) {
+      for (final member in group.groupmembers ?? []) {
+        if (member.user.value.user.userID == userID) {
+          member.user.value.speaker.value = speakerOn;
+          group.groupmembers?.refresh();
+        }
+      }
+    }
+    groups.refresh();
+  }
+
+  void _updateUserSpeaking(int userID, bool speaking) {
+    if (groups.value == null) return;
+    for (final group in groups.value!) {
+      for (final member in group.groupmembers ?? []) {
+        if (member.user.value.user.userID == userID) {
+          member.user.value.isSpeaking.value = speaking;
+          group.groupmembers?.refresh();
+        }
+      }
+    }
+    groups.refresh();
+  }
+
   // Socket.io ile mesaj gönderme
   Future<void> sendMessage(String messageValue, Room room) async {
-    GroupRoomChatsSendResponse response =
-        await ARMOYU.service.groupServices.groupRoomChatSend(
-      roomID: room.roomID,
-      content: messageValue,
-    );
+    final normalizedMessage = messageValue.trim();
+    if (normalizedMessage.isEmpty || AppList.sessions.isEmpty) {
+      return;
+    }
 
-    if (!response.result.status) {
+    GroupRoomChatsSendResponse response;
+    try {
+      response = await ARMOYU.service.groupServices.groupRoomChatSend(
+        roomID: room.roomID,
+        content: normalizedMessage,
+      );
+    } catch (e) {
+      log('${socketPREFIX}Hata (sendMessage): $e');
+      return;
+    }
+
+    if (!response.result.status || response.response == null) {
       return;
     }
 
@@ -695,13 +827,13 @@ class SocketioControllerV2 extends GetxController {
 
     var selectedGroup =
         groups.value!.firstWhere((group) => group.groupID == room.groupID);
-    var selectedRoom = selectedGroup.rooms!
-        .firstWhere((r) => r.roomID == room.roomID);
+    var selectedRoom =
+        selectedGroup.rooms!.firstWhere((r) => r.roomID == room.roomID);
 
     Message message = Message(
       id: chat.chatID,
       user: AppList.sessions.first.currentUser,
-      message: messageValue,
+      message: normalizedMessage,
       datetime: chat.date,
       room: room,
     );
@@ -711,6 +843,11 @@ class SocketioControllerV2 extends GetxController {
   }
 
   void sendAudio(Uint8List base64Audio) {
+    if (AppList.sessions.isEmpty ||
+        AppList.sessions.first.currentUser.user.userID == null) {
+      return;
+    }
+
     AudioModel audiomodel = AudioModel(
       userID: AppList.sessions.first.currentUser.user.userID!,
       base64Audio: base64Audio,
@@ -765,17 +902,33 @@ class SocketioControllerV2 extends GetxController {
   }
 
   Future<void> fetchUserList({int? groupID}) async {
-    // Sunucudan kullanıcı listesi isteme
-
-    GroupUsersResponse response =
-        await ARMOYU.service.groupServices.groupusersFetch(groupID: groupID);
-
-    if (!response.result.status) {
+    if (groupID == null) {
+      for (final group in AppList.groups) {
+        await fetchUserList(groupID: group.groupID);
+      }
       return;
     }
 
-    Group group =
-        AppList.groups.firstWhere((group) => group.groupID == groupID);
+    // Sunucudan kullanıcı listesi isteme
+
+    GroupUsersResponse response;
+    try {
+      response =
+          await ARMOYU.service.groupServices.groupusersFetch(groupID: groupID);
+    } catch (e) {
+      log('${socketPREFIX}Hata (fetchUserList): $e');
+      return;
+    }
+
+    if (!response.result.status || response.response == null) {
+      return;
+    }
+
+    Group? group =
+        AppList.groups.firstWhereOrNull((group) => group.groupID == groupID);
+    if (group == null) {
+      return;
+    }
 
     group.groupmembers = RxList([]);
     for (UserInfo element in response.response!.user) {
@@ -810,6 +963,11 @@ class SocketioControllerV2 extends GetxController {
 
   void startPing(Duration interval) {
     pingTimer = Timer.periodic(interval, (timer) {
+      if (AppList.sessions.isEmpty ||
+          AppList.sessions.first.currentUser.user.userID == null) {
+        return;
+      }
+
       pingID.value = DateTime.now().millisecondsSinceEpoch.toString() +
           AppList.sessions.first.currentUser.user.userID.toString();
       // log('Ping gönderiliyor... ID: ${pingID.value}');
@@ -828,6 +986,10 @@ class SocketioControllerV2 extends GetxController {
   }
 
   void exitroom() {
+    if (groups.value == null || AppList.sessions.isEmpty) {
+      return;
+    }
+
     for (var groupInfo in groups.value!) {
       //Oda yoksa bakma
       if (groupInfo.rooms == null) {
@@ -853,6 +1015,7 @@ class SocketioControllerV2 extends GetxController {
     }
 
     userUpdate(user);
+    socket.emit(mic.value ? 'MIC_UNMUTE' : 'MIC_MUTE');
   }
 
   void speakerOnOff(Player user) {
@@ -860,13 +1023,17 @@ class SocketioControllerV2 extends GetxController {
     var mic = user.microphone;
 
     speaker.value = !speaker.value;
-
     mic.value = speaker.value;
 
     userUpdate(user);
+    socket.emit(speaker.value ? 'SPEAKER_UNMUTE' : 'SPEAKER_MUTE');
   }
 
   void changeroom(Room? room) {
+    if (AppList.sessions.isEmpty) {
+      return;
+    }
+
     exitroom();
 
     if (room != null) {
@@ -874,25 +1041,31 @@ class SocketioControllerV2 extends GetxController {
       room.currentMembers.add(AppList.sessions.first.currentUser);
       player.play(AssetSource("sounds/join_room.wav"));
     } else {
+      // Kanaldan çıkıldığında ses yayınını durdur
+      socket.emit('AUDIO_STOP');
       player.play(AssetSource("sounds/leave_room.wav"));
     }
 
     try {
       log("oda değiştirildi");
-
       socket.emit('changeRoom', room?.toJson());
     } catch (e) {
       log("${socketPREFIX}Hata(changeRoom) $e");
     }
   }
 
-  roomchats(Room room) async {
-    GroupRoomChatsResponse response =
-        await ARMOYU.service.groupServices.groupRoomChats(
-      roomID: room.roomID,
-    );
+  Future<void> roomchats(Room room) async {
+    GroupRoomChatsResponse response;
+    try {
+      response = await ARMOYU.service.groupServices.groupRoomChats(
+        roomID: room.roomID,
+      );
+    } catch (e) {
+      log('${socketPREFIX}Hata (roomchats): $e');
+      return;
+    }
 
-    if (!response.result.status) {
+    if (!response.result.status || response.response == null) {
       return;
     }
 
@@ -966,14 +1139,27 @@ class SocketioControllerV2 extends GetxController {
   //
   Future<void> createRoom(String roomName, Group userCurrentgroup) async {
     Get.back();
+    final normalizedName = roomName.trim();
+    if (normalizedName.isEmpty) {
+      return;
+    }
+
     var currentgroup = findcurrentGroup(userCurrentgroup);
 
     currentgroup.rooms ??= RxList<Room>();
 
-    GroupCreateRoomResponse response = await ARMOYU.service.groupServices
-        .groupRoomCreate(groupID: currentgroup.groupID, roomName: roomName);
+    GroupCreateRoomResponse response;
+    try {
+      response = await ARMOYU.service.groupServices.groupRoomCreate(
+        groupID: currentgroup.groupID,
+        roomName: normalizedName,
+      );
+    } catch (e) {
+      log('${socketPREFIX}Hata (createRoom): $e');
+      return;
+    }
 
-    if (!response.result.status) {
+    if (!response.result.status || response.response == null) {
       return;
     }
 
@@ -993,8 +1179,14 @@ class SocketioControllerV2 extends GetxController {
 
     currentgroup.rooms ??= RxList<Room>();
 
-    ServiceResult response =
-        await ARMOYU.service.groupServices.groupRoomDelete(roomID: room.roomID);
+    ServiceResult response;
+    try {
+      response = await ARMOYU.service.groupServices
+          .groupRoomDelete(roomID: room.roomID);
+    } catch (e) {
+      log('${socketPREFIX}Hata (deleteRoom): $e');
+      return;
+    }
 
     if (!response.status) {
       return;
@@ -1005,6 +1197,10 @@ class SocketioControllerV2 extends GetxController {
   }
 
   bool isInRoom(Group userCurrentgroup) {
+    if (AppList.sessions.isEmpty) {
+      return false;
+    }
+
     var currentgroup = findcurrentGroup(userCurrentgroup);
 
     // Oda listesi null veya boş mu kontrol edin
@@ -1022,8 +1218,12 @@ class SocketioControllerV2 extends GetxController {
   }
 
   bool isInRoomanyWhereGroup() {
+    if (groups.value == null || AppList.sessions.isEmpty) {
+      return false;
+    }
+
     return groups.value!.any(
-      (element) => element.rooms!.any(
+      (element) => (element.rooms ?? <Room>[].obs).any(
         (element2) => element2.currentMembers.any(
           (element3) =>
               element3.user.userName!.value ==
@@ -1034,14 +1234,15 @@ class SocketioControllerV2 extends GetxController {
   }
 
   Group findcurrentGroup(Group userCurrentgroup) {
-    return groups.value!.firstWhere(
-      (element) => element == userCurrentgroup,
-    );
+    return groups.value?.firstWhereOrNull(
+          (element) => element == userCurrentgroup,
+        ) ??
+        userCurrentgroup;
   }
 
   Group findanyWhereGroup() {
     return groups.value!.firstWhere(
-      (element) => element.rooms!.any(
+      (element) => (element.rooms ?? <Room>[].obs).any(
         (element2) => element2.currentMembers.any(
           (element3) =>
               element3.user.userName!.value ==
