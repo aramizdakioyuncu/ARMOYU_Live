@@ -344,7 +344,7 @@ class SocketioControllerV2 extends GetxController {
       if (currentRoom != null) {
         log('${socketPREFIX}Yeniden bağlantı: oda geri gönderiliyor (${currentRoom.name.value})');
         socket.emitWithAck('changeRoom', currentRoom.toJson(), ack: (data) {
-          log('${socketPREFIX}changeRoom (reconnect) ack: $data');
+          log('${socketPREFIX}changeRoom (reconnect) ack: $data ${_stateLog()}');
         });
       }
     });
@@ -748,6 +748,16 @@ class SocketioControllerV2 extends GetxController {
   // ─── YARDIMCI: kullanıcı state güncellemeleri ────────────────────────────
 
   // RxList üzerinde firstWhereOrNull extension'ı çalışmadığı için for-loop ile arama
+  String _stateLog() {
+    if (AppList.sessions.isEmpty) return '[no session]';
+    final u = AppList.sessions.first.currentUser;
+    final room = findmyRoomanyWhereGroup();
+    final mic = u.microphone.value ? 'mic:on' : 'mic:off';
+    final spk = u.speaker.value ? 'spk:on' : 'spk:off';
+    final roomName = room?.name.value ?? 'no room';
+    return '[$mic | $spk | $roomName]';
+  }
+
   Groupmember? _findMember(RxList<Groupmember>? members, int? userID) {
     if (members == null || userID == null) return null;
     for (final m in members) {
@@ -893,7 +903,7 @@ class SocketioControllerV2 extends GetxController {
       'clientId': clientId,
       "groups": AppList.groups.map((g) => g.groupID).toList(),
     }, ack: (data) {
-      log('${socketPREFIX}REGISTER ack: $data');
+      log('${socketPREFIX}REGISTER ack: $data ${_stateLog()}');
     });
   }
 
@@ -1030,7 +1040,7 @@ class SocketioControllerV2 extends GetxController {
     final event = newMicState ? 'MIC_UNMUTE' : 'MIC_MUTE';
 
     socket.emitWithAck(event, null, ack: (data) {
-      log('$socketPREFIX$event ack: $data');
+      log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.microphone.value = newMicState;
       if (newMicState && user.speaker.value == false) {
         user.speaker.value = true;
@@ -1044,7 +1054,7 @@ class SocketioControllerV2 extends GetxController {
     final event = newSpeakerState ? 'SPEAKER_UNMUTE' : 'SPEAKER_MUTE';
 
     socket.emitWithAck(event, null, ack: (data) {
-      log('$socketPREFIX$event ack: $data');
+      log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.speaker.value = newSpeakerState;
       user.microphone.value = newSpeakerState;
       userUpdate(user);
@@ -1070,7 +1080,7 @@ class SocketioControllerV2 extends GetxController {
 
     try {
       socket.emitWithAck('changeRoom', room?.toJson(), ack: (data) {
-        log('${socketPREFIX}changeRoom ack: $data');
+        log('${socketPREFIX}changeRoom ack: $data ${_stateLog()}');
       });
     } catch (e) {
       log('${socketPREFIX}Hata(changeRoom) $e');
