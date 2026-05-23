@@ -23,29 +23,36 @@ class MainpageView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final sidebarWidth = constraints.maxWidth < 1200 ? 200.0 : 240.0;
+        final theme = Theme.of(context);
+        final surfaceColor =
+            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+        final textColor =
+            theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+        final dividerColor = theme.dividerColor.withValues(alpha: 0.35);
+        final sectionTextColor = textColor.withValues(alpha: 0.48);
 
         return Row(
           children: [
             SizedBox(
               width: sidebarWidth,
               child: Container(
-                color: const Color(0xFF111111),
+                color: surfaceColor,
                 child: Column(
                   children: [
                     Container(
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(color: Color(0xFF1E1E1E)),
+                          bottom: BorderSide(color: dividerColor),
                         ),
                       ),
-                      child: const Align(
+                      child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           "Ana Sayfa",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
@@ -113,10 +120,10 @@ class MainpageView extends StatelessWidget {
                               ),
                               child: Row(
                                 children: [
-                                  const Text(
+                                  Text(
                                     "DİREKT MESAJLAR",
                                     style: TextStyle(
-                                      color: Color(0xFF555555),
+                                      color: sectionTextColor,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 1,
@@ -156,7 +163,8 @@ class MainpageView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Bottomusermenu.field(AppList.sessions.first.currentUser),
+                    if (AppList.sessions.isNotEmpty)
+                      Bottomusermenu.field(AppList.sessions.first.currentUser),
                   ],
                 ),
               ),
@@ -220,6 +228,15 @@ class _NavItemState extends State<_NavItem> {
   @override
   Widget build(BuildContext context) {
     final isSelected = widget.selectedIndex == widget.index;
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final selectedBackground =
+        theme.colorScheme.primary.withValues(alpha: 0.16);
+    final hoverBackground = textColor.withValues(alpha: 0.08);
+    final mutedColor = textColor.withValues(alpha: 0.58);
+    final hoverColor = textColor.withValues(alpha: 0.78);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -231,9 +248,9 @@ class _NavItemState extends State<_NavItem> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF2A2A2A)
+                ? selectedBackground
                 : _hovered
-                    ? const Color(0xFF1E1E1E)
+                    ? hoverBackground
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
@@ -243,10 +260,8 @@ class _NavItemState extends State<_NavItem> {
                 widget.icon,
                 size: 18,
                 color: isSelected
-                    ? Colors.white
-                    : (_hovered
-                        ? const Color(0xFFCCCCCC)
-                        : const Color(0xFF777777)),
+                    ? textColor
+                    : (_hovered ? hoverColor : mutedColor),
               ),
               const SizedBox(width: 10),
               Text(
@@ -255,10 +270,8 @@ class _NavItemState extends State<_NavItem> {
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected
-                      ? Colors.white
-                      : (_hovered
-                          ? const Color(0xFFCCCCCC)
-                          : const Color(0xFF888888)),
+                      ? textColor
+                      : (_hovered ? hoverColor : mutedColor),
                 ),
               ),
             ],
@@ -294,6 +307,17 @@ class _DmItemState extends State<_DmItem> {
           widget.chatINFO.sohbetTuru ==
               widget.chatcontroller.chat.value?.sohbetTuru &&
           widget.chatINFO.kullAdi == widget.chatcontroller.chat.value?.kullAdi;
+      final theme = Theme.of(context);
+      final textColor =
+          theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+      final selectedBackground =
+          theme.colorScheme.primary.withValues(alpha: 0.16);
+      final hoverBackground = textColor.withValues(alpha: 0.08);
+      final mutedColor = textColor.withValues(alpha: 0.58);
+      final hoverColor = textColor.withValues(alpha: 0.78);
+      final avatarBackground = textColor.withValues(alpha: 0.10);
+      final borderColor =
+          theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
 
       return MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
@@ -309,9 +333,9 @@ class _DmItemState extends State<_DmItem> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: isSelected
-                  ? const Color(0xFF2A2A2A)
+                  ? selectedBackground
                   : _hovered
-                      ? const Color(0xFF1E1E1E)
+                      ? hoverBackground
                       : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
@@ -323,9 +347,9 @@ class _DmItemState extends State<_DmItem> {
                     Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xFF2A2A2A),
+                        color: avatarBackground,
                       ),
                       child: ClipOval(
                         child: CachedNetworkImage(
@@ -343,8 +367,9 @@ class _DmItemState extends State<_DmItem> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.green.shade400,
-                          border: const Border.fromBorderSide(
-                              BorderSide(color: Color(0xFF111111), width: 1.5)),
+                          border: Border.fromBorderSide(
+                            BorderSide(color: borderColor, width: 1.5),
+                          ),
                         ),
                       ),
                     ),
@@ -359,10 +384,8 @@ class _DmItemState extends State<_DmItem> {
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w400,
                       color: isSelected
-                          ? Colors.white
-                          : (_hovered
-                              ? const Color(0xFFCCCCCC)
-                              : const Color(0xFF888888)),
+                          ? textColor
+                          : (_hovered ? hoverColor : mutedColor),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -390,6 +413,9 @@ class _IconActionState extends State<_IconAction> {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ??
+        Theme.of(context).colorScheme.onSurface;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -399,12 +425,14 @@ class _IconActionState extends State<_IconAction> {
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: _hovered ? const Color(0xFF2A2A2A) : Colors.transparent,
+            color: _hovered
+                ? textColor.withValues(alpha: 0.08)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Icon(widget.icon,
               size: 14,
-              color: _hovered ? Colors.white : const Color(0xFF666666)),
+              color: _hovered ? textColor : textColor.withValues(alpha: 0.52)),
         ),
       ),
     );

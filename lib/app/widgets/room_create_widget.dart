@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 class RoomCreateWidget {
   static void showAlertDialog(
       BuildContext context, Group group, SocketioControllerV2 socketio) {
-    var textController = TextEditingController().obs;
+    final textController = TextEditingController();
 
     showDialog(
       context: context,
@@ -16,7 +16,7 @@ class RoomCreateWidget {
           content: const Text('Oluşturduğun oda anlık gözükür.'),
           actions: <Widget>[
             TextField(
-              controller: textController.value,
+              controller: textController,
             ),
             const SizedBox(height: 10),
             Row(
@@ -32,7 +32,7 @@ class RoomCreateWidget {
                   child: const Text('Oluştur'),
                   onPressed: () {
                     socketio.createRoom(
-                      textController.value.text,
+                      textController.text,
                       group,
                     );
                   },
@@ -42,6 +42,6 @@ class RoomCreateWidget {
           ],
         );
       },
-    );
+    ).whenComplete(textController.dispose);
   }
 }

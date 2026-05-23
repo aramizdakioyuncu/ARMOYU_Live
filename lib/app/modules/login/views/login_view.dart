@@ -1,5 +1,6 @@
 import 'package:armoyu_desktop/app/modules/login/controllers/login_controller.dart';
 import 'package:armoyu_desktop/app/widgets/appbar_widget.dart';
+import 'package:armoyu_desktop/app/widgets/ui/app_ui.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,7 +17,7 @@ class LoginView extends StatelessWidget {
         final isCompact = constraints.maxWidth < 960;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0A0A0A),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: Column(
             children: [
               AppbarWidget.buildAppBar(),
@@ -215,7 +216,7 @@ class _FormPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF111111),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: compact
           ? SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -250,24 +251,28 @@ class _LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final secondaryTextColor = textColor.withValues(alpha: 0.58);
+
     return Column(
       mainAxisAlignment:
           compact ? MainAxisAlignment.start : MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Hoş Geldin",
           style: TextStyle(
-            color: Colors.white,
+            color: textColor,
             fontSize: 26,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           "Hesabına giriş yap",
           style: TextStyle(
-            color: Color(0xFF555555),
+            color: secondaryTextColor,
             fontSize: 13,
           ),
         ),
@@ -302,7 +307,7 @@ class _LoginForm extends StatelessWidget {
                 controller.isPasswordVisible.value
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
-                color: const Color(0xFF555555),
+                color: secondaryTextColor,
                 size: 18,
               ),
               onPressed: controller.togglePasswordVisibility,
@@ -320,10 +325,7 @@ class _LoginForm extends StatelessWidget {
             },
             title: const Text(
               "Şifremi hatırla",
-              style: TextStyle(
-                color: Color(0xFFCCCCCC),
-                fontSize: 13,
-              ),
+              style: TextStyle(fontSize: 13),
             ),
             activeColor: Colors.red,
             checkColor: Colors.white,
@@ -381,7 +383,7 @@ class _LoginForm extends StatelessWidget {
           child: Text(
             "v1.0.0.0",
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: textColor.withValues(alpha: 0.18),
               fontSize: 11,
             ),
           ),
@@ -398,10 +400,17 @@ class _InputLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelColor = Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.color
+            ?.withValues(alpha: 0.62) ??
+        const Color(0xFF777777);
+
     return Text(
       text,
-      style: const TextStyle(
-        color: Color(0xFF777777),
+      style: TextStyle(
+        color: labelColor,
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.8,
@@ -431,26 +440,31 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyMedium?.color ?? Colors.white;
+    final subtleColor = textColor.withValues(alpha: 0.48);
+    final borderColor = theme.dividerColor.withValues(alpha: 0.35);
+
     return TextField(
       controller: controller,
       obscureText: obscureText,
       autofocus: autofocus,
       onSubmitted: onSubmitted,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
+      style: TextStyle(color: textColor, fontSize: 14),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: Color(0xFF3A3A3A), fontSize: 14),
-        prefixIcon: Icon(prefixIcon, color: const Color(0xFF4A4A4A), size: 18),
+        hintStyle: TextStyle(color: subtleColor, fontSize: 14),
+        prefixIcon: Icon(prefixIcon, color: subtleColor, size: 18),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: const Color(0xFF1A1A1A),
+        fillColor: theme.inputDecorationTheme.fillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF252525)),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF252525)),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -471,38 +485,11 @@ class _LoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 46,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          disabledBackgroundColor: Colors.red.withValues(alpha: 0.35),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Text(
-                "Giriş Yap",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-      ),
+    return AppButton(
+      label: "Giriş Yap",
+      onPressed: onPressed,
+      isLoading: isLoading,
+      expanded: true,
     );
   }
 }

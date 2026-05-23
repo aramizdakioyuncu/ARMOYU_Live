@@ -52,17 +52,29 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     localStream?.getTracks().forEach((t) => t.stop());
+    screenStream?.getTracks().forEach((t) => t.stop());
     peerConnection?.close();
+    pageController.dispose();
     localRenderer.value.dispose();
+    remoteRenderer.value.dispose();
     for (var renderer in remoteRenderers) {
       renderer.dispose();
     }
     super.onClose();
   }
 
-  fetchgroup() async {
-    APIMyGroupListResponse response =
-        await ARMOYU.service.profileServices.myGroups();
+  Future<void> fetchgroup() async {
+    APIMyGroupListResponse response;
+    try {
+      response = await ARMOYU.service.profileServices.myGroups();
+    } catch (e) {
+      log("Gruplar alınamadı: $e");
+      return;
+    }
+
+    if (!response.result.status || response.response == null) {
+      return;
+    }
 
     AppList.groups.value = [];
 
@@ -85,10 +97,14 @@ class HomeController extends GetxController {
         ),
       );
     }
+
+    socketio.groups.value = AppList.groups;
+    socketio.initgroup();
+    socketio.fetchUserList();
   }
 
   void showAlertDialog(BuildContext context, SocketioControllerV2 socketio) {
-    var textController = TextEditingController().obs;
+    final textController = TextEditingController();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -97,7 +113,7 @@ class HomeController extends GetxController {
           content: const Text('Oluşturduğun Grup anlık gözükür.'),
           actions: <Widget>[
             TextField(
-              controller: textController.value,
+              controller: textController,
             ),
             const SizedBox(height: 10),
             Row(
@@ -111,30 +127,8 @@ class HomeController extends GetxController {
                 const Spacer(),
                 ElevatedButton(
                   child: const Text('Oluştur'),
-                  onPressed: () {
-                    AppList.groups.add(
-                      Group(
-                        rooms: <Room>[].obs,
-                        groupID: 13,
-                        name: textController.value.text,
-                        description: "dgfkljsdgjsdlkgjsedl",
-                        logo: Media(
-                          mediaID: 0,
-                          mediaType: MediaType.image,
-                          mediaURL: MediaURL(
-                            bigURL: Rx(
-                              "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/220px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-                            ),
-                            normalURL: Rx(
-                              "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/220px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-                            ),
-                            minURL: Rx(
-                              "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/220px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
+                  onPressed: () async {
+                    await createGroup(textController.text);
                     Get.back();
                   },
                 ),
@@ -143,7 +137,36 @@ class HomeController extends GetxController {
           ],
         );
       },
-    );
+    ).whenComplete(textController.dispose);
+  }
+
+  Future<void> createGroup(String groupName) async {
+    final normalizedName = groupName.trim();
+    if (normalizedName.isEmpty) {
+      return;
+    }
+
+    final abbreviation = normalizedName
+        .replaceAll(RegExp(r'\s+'), '')
+        .toUpperCase()
+        .padRight(3, 'X')
+        .substring(0, 3);
+
+    try {
+      final response = await ARMOYU.service.groupServices.groupcreate(
+        grupadi: normalizedName,
+        kisaltmaadi: abbreviation,
+        grupkategori: 0,
+        grupkategoridetay: 0,
+        varsayilanoyun: 0,
+      );
+
+      if (response.result.status) {
+        await fetchgroup();
+      }
+    } catch (e) {
+      log("Grup oluşturulamadı: $e");
+    }
   }
 
   Future<void> init() async {
@@ -154,11 +177,15 @@ class HomeController extends GetxController {
       });
     } catch (e) {
       if (kDebugMode) {
-        print("Medya akışı alınamadı: $e");
+        log("Medya akışı alınamadı: $e");
       }
     }
 
     // Akışı bir renderer ile yerel videoda göster
+    if (localStream == null) {
+      return;
+    }
+
     localRenderer.value.srcObject = localStream;
 
     peerConnection = await webrtc.createPeerConnection({
@@ -213,8 +240,7 @@ class HomeController extends GetxController {
     var sources = await webrtc.desktopCapturer.getSources(types: [sourceType]);
     for (var element in sources) {
       if (kDebugMode) {
-        print(
-            'name: ${element.name}, id: ${element.id}, type: ${element.type}');
+        log('name: ${element.name}, id: ${element.id}, type: ${element.type}');
       }
     }
 
@@ -227,12 +253,12 @@ class HomeController extends GetxController {
           devices.where((device) => device.kind == 'videoinput').toList();
       for (webrtc.MediaDeviceInfo device in screenDevices) {
         if (kDebugMode) {
-          print(device.label);
+          log(device.label);
         }
       }
       if (screenDevices.isEmpty) {
         if (kDebugMode) {
-          print('Ekran cihazı bulunamadı!');
+          log('Ekran cihazı bulunamadı!');
         }
         return;
       }
@@ -253,14 +279,14 @@ class HomeController extends GetxController {
       });
 
       if (kDebugMode) {
-        print("Ekran paylaşımı başladı");
+        log("Ekran paylaşımı başladı");
       }
 
       // Eğer ekran paylaşımını yerel video olarak da göstermek isterseniz
       // video renderer'ı güncelleyebilirsiniz.
     } catch (e) {
       if (kDebugMode) {
-        print("Ekran paylaşımı başlatılamadı: $e");
+        log("Ekran paylaşımı başlatılamadı: $e");
       }
     }
   }
@@ -274,7 +300,7 @@ class HomeController extends GetxController {
       });
 
       if (kDebugMode) {
-        print("Ekran paylaşımı durduruldu");
+        log("Ekran paylaşımı durduruldu");
       }
 
       // Peer connection'dan ekran akışını kaldırmak isterseniz
@@ -288,7 +314,7 @@ class HomeController extends GetxController {
       });
     } catch (e) {
       if (kDebugMode) {
-        print("Ekran paylaşımı durdurulamadı: $e");
+        log("Ekran paylaşımı durdurulamadı: $e");
       }
     }
   }
@@ -316,16 +342,16 @@ class HomeController extends GetxController {
         });
 
         if (kDebugMode) {
-          print("Yeni mikrofon kullanılıyor: $secondMicrophoneId");
+          log("Yeni mikrofon kullanılıyor: $secondMicrophoneId");
         }
       } else {
         if (kDebugMode) {
-          print("Mikrofon bulunamadı!");
+          log("Mikrofon bulunamadı!");
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Mikrofon seçimi hatası: $e");
+        log("Mikrofon seçimi hatası: $e");
       }
     }
   }

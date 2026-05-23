@@ -1,4 +1,5 @@
 import 'package:armoyu_desktop/app/data/models/message_model.dart';
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -22,14 +23,15 @@ class _MessageItemState extends State<_MessageItem> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
-        color: _hovered
-            ? const Color(0xFF161616)
-            : Colors.transparent,
+        color:
+            _hovered ? tokens.text.withValues(alpha: 0.05) : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,15 +43,18 @@ class _MessageItemState extends State<_MessageItem> {
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF2A2A2A),
+                color: tokens.surfaceMuted,
               ),
               child: ClipOval(
                 child: CachedNetworkImage(
-                  imageUrl: widget.message.user.value.user.avatar!.mediaURL
-                      .minURL.value,
+                  imageUrl: widget
+                      .message.user.value.user.avatar!.mediaURL.minURL.value,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const Icon(Icons.person,
-                      color: Colors.white54, size: 18),
+                  errorWidget: (_, __, ___) => Icon(
+                    Icons.person,
+                    color: tokens.textSubtle,
+                    size: 18,
+                  ),
                 ),
               ),
             ),
@@ -66,8 +71,8 @@ class _MessageItemState extends State<_MessageItem> {
                     children: [
                       Text(
                         widget.message.user.value.user.displayName!.value,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: tokens.text,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -75,8 +80,8 @@ class _MessageItemState extends State<_MessageItem> {
                       const SizedBox(width: 8),
                       Text(
                         _formatDate(widget.message.datetime),
-                        style: const TextStyle(
-                          color: Color(0xFF555555),
+                        style: TextStyle(
+                          color: tokens.textSubtle,
                           fontSize: 10,
                         ),
                       ),
@@ -86,8 +91,8 @@ class _MessageItemState extends State<_MessageItem> {
                   // Message text
                   Obx(() => Text(
                         widget.message.message.value,
-                        style: const TextStyle(
-                          color: Color(0xFFCCCCCC),
+                        style: TextStyle(
+                          color: tokens.textMuted,
                           fontSize: 13,
                           height: 1.4,
                         ),
@@ -99,11 +104,11 @@ class _MessageItemState extends State<_MessageItem> {
                       margin: const EdgeInsets.only(top: 6),
                       height: 180,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.circular(8),
+                        color: tokens.surfaceMuted,
+                        borderRadius: BorderRadius.circular(tokens.radiusMd),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(tokens.radiusMd),
                         child: GridView.builder(
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
@@ -139,9 +144,7 @@ class _MessageItemState extends State<_MessageItem> {
           : DateTime.tryParse(datetime.toString());
       if (dt == null) return "";
       final now = DateTime.now();
-      if (dt.day == now.day &&
-          dt.month == now.month &&
-          dt.year == now.year) {
+      if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
         return "bugün ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
       }
       return "${dt.day}.${dt.month}.${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";

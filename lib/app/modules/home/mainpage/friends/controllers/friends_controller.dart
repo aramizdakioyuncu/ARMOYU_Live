@@ -34,6 +34,12 @@ class FriendsController extends GetxController {
     });
   }
 
+  @override
+  void onClose() {
+    scrollController.value.dispose();
+    super.onClose();
+  }
+
   loadMoreFriends() {
     fetchfriendlist();
   }
@@ -44,15 +50,26 @@ class FriendsController extends GetxController {
     }
 
     isLoadingMoreProccess.value = true;
-    ProfileFriendListResponse response =
-        await ARMOYU.service.profileServices.friendlist(
-      userID: AppList.sessions.first.currentUser.user.userID!,
-      page: currentPage.value,
-    );
+    if (AppList.sessions.isEmpty ||
+        AppList.sessions.first.currentUser.user.userID == null) {
+      isLoadingMoreProccess.value = false;
+      return;
+    }
+
+    ProfileFriendListResponse response;
+    try {
+      response = await ARMOYU.service.profileServices.friendlist(
+        userID: AppList.sessions.first.currentUser.user.userID!,
+        page: currentPage.value,
+      );
+    } catch (_) {
+      isLoadingMoreProccess.value = false;
+      return;
+    }
 
     isLoadingMoreProccess.value = false;
 
-    if (!response.result.status) {
+    if (!response.result.status || response.response == null) {
       return;
     }
 

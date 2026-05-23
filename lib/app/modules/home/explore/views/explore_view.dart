@@ -14,12 +14,14 @@ class ExploreView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final sidebarWidth = constraints.maxWidth < 1100 ? 200.0 : 250.0;
+        final theme = Theme.of(context);
 
         return Scaffold(
           body: Row(
             children: [
               Container(
-                color: const Color.fromARGB(255, 29, 29, 29),
+                color: theme.appBarTheme.backgroundColor ??
+                    theme.colorScheme.surface,
                 width: sidebarWidth,
                 child: Column(
                   children: [

@@ -18,17 +18,29 @@ class MainpageController extends GetxController {
     super.onInit();
   }
 
+  @override
+  void onClose() {
+    pageviewController.value.dispose();
+    super.onClose();
+  }
+
   Future<void> fetchchats() async {
     if (chatproccess.value) {
       return;
     }
 
     chatproccess.value = true;
-    ChatListResponse response =
-        await ARMOYU.service.chatServices.currentChatList(page: chatpage.value);
+    ChatListResponse response;
+    try {
+      response = await ARMOYU.service.chatServices
+          .currentChatList(page: chatpage.value);
+    } catch (_) {
+      chatproccess.value = false;
+      return;
+    }
     chatproccess.value = false;
 
-    if (!response.result.status) {
+    if (!response.result.status || response.response == null) {
       return;
     }
 

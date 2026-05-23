@@ -30,6 +30,7 @@ class ThemeController extends GetxController {
   Future<void> setThemeMode(ThemeMode mode) async {
     _preferences ??= await SharedPreferences.getInstance();
     themeMode.value = mode;
+    Get.changeThemeMode(mode);
     await _preferences!.setString(_themeModeKey, mode.name);
   }
 

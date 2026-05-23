@@ -1,3 +1,5 @@
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
+import 'package:armoyu_desktop/app/widgets/ui/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -29,13 +31,15 @@ class _SendFieldState extends State<_SendField> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(10),
+        color: tokens.surfaceMuted,
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
         border: Border.all(
-          color: _focused ? const Color(0xFF3A3A3A) : const Color(0xFF252525),
+          color: _focused ? tokens.accent : tokens.border,
         ),
       ),
       child: Row(
@@ -52,20 +56,20 @@ class _SendFieldState extends State<_SendField> {
                 onSubmitted: (value) {
                   widget.onsubmitted(value);
                 },
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.text,
                   fontSize: 13,
                   height: 1.4,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: "Mesaj gönder...",
                   hintStyle: TextStyle(
-                    color: Color(0xFF444444),
+                    color: tokens.textSubtle,
                     fontSize: 13,
                   ),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
               ),
             ),
@@ -97,31 +101,14 @@ class _ActionBtn extends StatefulWidget {
 }
 
 class _ActionBtnState extends State<_ActionBtn> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: _hovered ? const Color(0xFF2A2A2A) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 18,
-            color: _hovered
-                ? (widget.color ?? Colors.white)
-                : (widget.color ?? const Color(0xFF666666)),
-          ),
-        ),
-      ),
+    return AppIconAction(
+      icon: widget.icon,
+      onTap: widget.onTap,
+      color: widget.color,
+      size: 34,
+      iconSize: 18,
     );
   }
 }

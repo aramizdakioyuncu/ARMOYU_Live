@@ -1,3 +1,5 @@
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
+import 'package:armoyu_desktop/app/widgets/ui/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
@@ -6,124 +8,128 @@ class AppbarWidget {
   static Widget buildAppBar({String? label, List<Widget> actions = const []}) {
     var isHoveredClose = false.obs;
 
-    return GestureDetector(
-      onPanUpdate: (details) {
-        windowManager.startDragging();
-      },
-      onDoubleTap: () async {
-        if (await windowManager.isMaximized()) {
-          windowManager.unmaximize();
-        } else {
-          windowManager.maximize();
-        }
-      },
-      child: Container(
-        color: Colors.transparent,
-        height: 35,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final tokens = AppThemeTokens.of(context);
+        final themeBackgroundColor =
+            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+        final backgroundColor = _slightlyDarker(themeBackgroundColor);
+        final foregroundColor =
+            theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
+
+        return GestureDetector(
+          onPanUpdate: (details) {
+            windowManager.startDragging();
+          },
+          onDoubleTap: () async {
+            if (await windowManager.isMaximized()) {
+              windowManager.unmaximize();
+            } else {
+              windowManager.maximize();
+            }
+          },
+          child: Container(
+            color: backgroundColor,
+            height: 35,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Icon(
-                    Icons.info,
-                    color: Colors.amber,
-                  ),
-                ),
-                Text(
-                  label ?? "ARMOYU",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                ...actions,
-                IconButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  icon: const Icon(
-                    Icons.remove,
-                    color: Colors.white,
-                    size: 19,
-                  ),
-                  style: const ButtonStyle(
-                    shape: WidgetStatePropertyAll(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
+                Row(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Icon(
+                        Icons.info,
+                        color: Colors.amber,
                       ),
                     ),
-                  ),
-                  onPressed: () async {
-                    windowManager.minimize();
-                  },
-                ),
-                IconButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  icon: const Icon(
-                    Icons.crop_square,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                  style: const ButtonStyle(
-                    shape: WidgetStatePropertyAll(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
+                    Text(
+                      label ?? "ARMOYU",
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontSize: 16,
                       ),
                     ),
-                  ),
-                  onPressed: () async {
-                    bool isMaximized = await windowManager.isMaximized();
-                    if (isMaximized) {
-                      windowManager.unmaximize(); // Pencereyi normale döndür
-                    } else {
-                      windowManager.maximize(); // Pencereyi tam ekran yap
-                    }
-                  },
+                  ],
                 ),
-                MouseRegion(
-                  onEnter: (_) {
-                    isHoveredClose.value = true;
-                  },
-                  onExit: (_) {
-                    isHoveredClose.value = false;
-                  },
-                  child: Obx(
-                    () => IconButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(
-                          isHoveredClose.value
-                              ? Colors.red
-                              : Colors.transparent,
-                        ),
-                        shape: const WidgetStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.zero,
+                const Spacer(),
+                Row(
+                  children: [
+                    ...actions,
+                    AppIconAction(
+                      icon: Icons.remove,
+                      color: foregroundColor,
+                      size: 35,
+                      iconSize: 19,
+                      tooltip: 'Küçült',
+                      onTap: () async {
+                        windowManager.minimize();
+                      },
+                    ),
+                    AppIconAction(
+                      icon: Icons.crop_square,
+                      color: foregroundColor,
+                      size: 35,
+                      iconSize: 16,
+                      tooltip: 'Büyüt',
+                      onTap: () async {
+                        bool isMaximized = await windowManager.isMaximized();
+                        if (isMaximized) {
+                          windowManager.unmaximize();
+                        } else {
+                          windowManager.maximize();
+                        }
+                      },
+                    ),
+                    MouseRegion(
+                      onEnter: (_) {
+                        isHoveredClose.value = true;
+                      },
+                      onExit: (_) {
+                        isHoveredClose.value = false;
+                      },
+                      child: Obx(
+                        () => Tooltip(
+                          message: 'Kapat',
+                          child: GestureDetector(
+                            onTap: () {
+                              windowManager.close();
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 120),
+                              width: 44,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: isHoveredClose.value
+                                    ? tokens.destructive
+                                    : Colors.transparent,
+                                borderRadius:
+                                    BorderRadius.circular(tokens.radiusSm),
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                color: isHoveredClose.value
+                                    ? Colors.white
+                                    : foregroundColor,
+                                size: 18,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      onPressed: () {
-                        windowManager.close();
-                      },
                     ),
-                  ),
-                ),
+                  ],
+                )
               ],
-            )
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  static Color _slightlyDarker(Color color) {
+    return Color.lerp(color, Colors.black, 0.2) ?? color;
   }
 }

@@ -1,9 +1,9 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/room_model.dart';
 import 'package:armoyu_desktop/app/services/socketio_controller.dart';
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
 import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -31,6 +31,8 @@ class _RoomItemState extends State<_RoomItem> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -42,21 +44,27 @@ class _RoomItemState extends State<_RoomItem> {
             child: GestureDetector(
               onTap: () => widget.socketio.changeroom(widget.room),
               child: Obx(() {
-                final isActive =
-                    widget.socketio.isInRoom(widget.group) &&
-                        widget.socketio.findmyRoom(widget.group)?.roomID ==
-                            widget.room.roomID;
+                final isActive = widget.socketio.isInRoom(widget.group) &&
+                    widget.socketio.findmyRoom(widget.group)?.roomID ==
+                        widget.room.roomID;
+                final itemColor = isActive
+                    ? tokens.accentSoft
+                    : _hovered
+                        ? tokens.text.withValues(alpha: 0.08)
+                        : Colors.transparent;
+                final contentColor = isActive
+                    ? tokens.text
+                    : (_hovered ? tokens.text : tokens.textMuted);
+
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 120),
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFF2A2A2A)
-                        : _hovered
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
+                    color: itemColor,
+                    borderRadius: BorderRadius.circular(tokens.radiusSm),
                   ),
                   child: Row(
                     children: [
@@ -65,9 +73,7 @@ class _RoomItemState extends State<_RoomItem> {
                             ? Icons.tag_rounded
                             : Icons.volume_up_rounded,
                         size: 16,
-                        color: isActive
-                            ? Colors.white
-                            : const Color(0xFF666666),
+                        color: contentColor,
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -78,11 +84,7 @@ class _RoomItemState extends State<_RoomItem> {
                                 fontWeight: isActive
                                     ? FontWeight.w600
                                     : FontWeight.w400,
-                                color: isActive
-                                    ? Colors.white
-                                    : (_hovered
-                                        ? const Color(0xFFCCCCCC)
-                                        : const Color(0xFF888888)),
+                                color: contentColor,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             )),
@@ -94,15 +96,17 @@ class _RoomItemState extends State<_RoomItem> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A2A2A),
-                            borderRadius: BorderRadius.circular(10),
+                            color: tokens.surfaceMuted,
+                            borderRadius:
+                                BorderRadius.circular(tokens.radiusLg),
                           ),
                           child: Text(
                             count.toString(),
-                            style: const TextStyle(
-                                color: Color(0xFF888888),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: tokens.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         );
                       }),
@@ -115,7 +119,8 @@ class _RoomItemState extends State<_RoomItem> {
         ),
         // Odadaki üyeler
         Obx(() => Column(
-              children: List.generate(widget.room.currentMembers.length,
+              children: List.generate(
+                  widget.room.currentMembers.length,
                   (index) => _RoomMemberTile(
                         member: widget.room.currentMembers[index],
                         socketio: widget.socketio,
@@ -126,13 +131,10 @@ class _RoomItemState extends State<_RoomItem> {
   }
 
   void _showContextMenu(BuildContext context, TapDownDetails details) {
+    final tokens = AppThemeTokens.of(context);
+
     showMenu(
-      color: const Color(0xFF1E1E1E),
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFF2A2A2A)),
-      ),
       position: RelativeRect.fromLTRB(
         details.globalPosition.dx,
         details.globalPosition.dy,
@@ -140,10 +142,12 @@ class _RoomItemState extends State<_RoomItem> {
         details.globalPosition.dy + 1,
       ),
       items: [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'edit',
-          child: Text('Düzenle',
-              style: TextStyle(color: Colors.white, fontSize: 13)),
+          child: Text(
+            'Düzenle',
+            style: TextStyle(color: tokens.text, fontSize: 13),
+          ),
         ),
         PopupMenuItem(
           value: 'delete',
@@ -162,8 +166,8 @@ class _RoomItemState extends State<_RoomItem> {
       if (value == 'delete') {
         widget.socketio.deleteRoom(widget.room, widget.group);
       }
-      if (kDebugMode && value != null) {
-        print("Seçilen: $value");
+      if (value != null) {
+        debugPrint("Seçilen: $value");
       }
     });
   }
@@ -184,6 +188,8 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -191,14 +197,13 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
         onTap: () => widget.socketio.callUser(widget.member),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          margin:
-              const EdgeInsets.only(left: 24, right: 8, top: 1, bottom: 1),
+          margin: const EdgeInsets.only(left: 24, right: 8, top: 1, bottom: 1),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: _hovered
-                ? const Color(0xFF1E1E1E)
+                ? tokens.text.withValues(alpha: 0.08)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
           ),
           child: Row(
             children: [
@@ -210,7 +215,7 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
                         height: 24,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF2A2A2A),
+                          color: tokens.surfaceMuted,
                           border: widget.socketio.isSoundStreaming.value
                               ? Border.all(
                                   color: Colors.amber.withValues(alpha: 0.8),
@@ -219,8 +224,8 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
                         ),
                         child: ClipOval(
                           child: CachedNetworkImage(
-                            imageUrl: widget.member.user.avatar!.mediaURL
-                                .minURL.value,
+                            imageUrl: widget
+                                .member.user.avatar!.mediaURL.minURL.value,
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -233,9 +238,7 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
                       widget.member.user.displayName!.value,
                       style: TextStyle(
                         fontSize: 12,
-                        color: _hovered
-                            ? Colors.white
-                            : const Color(0xFF888888),
+                        color: _hovered ? tokens.text : tokens.textMuted,
                         overflow: TextOverflow.ellipsis,
                         fontWeight: FontWeight.w400,
                       ),
@@ -249,13 +252,13 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
                             size: 13,
                             color: widget.member.microphoneAccess.value
                                 ? Colors.red
-                                : const Color(0xFF555555)),
+                                : tokens.textSubtle),
                       if (widget.member.speaker.value != true)
                         Icon(Icons.headset_off_outlined,
                             size: 13,
                             color: widget.member.speakerAccess.value
                                 ? Colors.red
-                                : const Color(0xFF555555)),
+                                : tokens.textSubtle),
                     ],
                   )),
             ],

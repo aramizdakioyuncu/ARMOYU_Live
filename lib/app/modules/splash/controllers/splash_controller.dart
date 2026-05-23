@@ -1,12 +1,22 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 class SplashController extends GetxController {
+  Timer? _navigationTimer;
+
   @override
   void onInit() {
     super.onInit();
 
-    Future.delayed(const Duration(seconds: 2), () {
-      Get.toNamed("/login");
+    _navigationTimer = Timer(const Duration(seconds: 2), () {
+      Get.offNamed("/login");
     });
+  }
+
+  @override
+  void onClose() {
+    _navigationTimer?.cancel();
+    super.onClose();
   }
 }

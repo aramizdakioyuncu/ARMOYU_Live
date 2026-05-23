@@ -1,282 +1,246 @@
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
 import 'package:flutter/material.dart';
 
-final ThemeData appDarkThemeData = ThemeData.dark().copyWith(
-  primaryColor: Colors.white,
-  visualDensity: VisualDensity.adaptivePlatformDensity,
-  scaffoldBackgroundColor: Colors.black,
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Colors.black,
-    foregroundColor: Colors.white,
-  ),
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ButtonStyle(
-      backgroundColor: WidgetStateProperty.all(Colors.grey.shade900),
-      foregroundColor: WidgetStateProperty.all(Colors.white),
-    ),
-  ),
-  floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: Colors.grey.shade900,
-    foregroundColor: Colors.white,
-  ),
-  badgeTheme: const BadgeThemeData(
-    textColor: Colors.white,
-  ),
-  switchTheme: SwitchThemeData(
-    thumbColor: const WidgetStatePropertyAll(Colors.red),
-    trackColor: WidgetStatePropertyAll(Colors.grey.shade900),
-  ),
-  radioTheme: const RadioThemeData(
-    fillColor: WidgetStatePropertyAll(Colors.red),
-  ),
-  checkboxTheme: const CheckboxThemeData(
-    fillColor: WidgetStatePropertyAll(Colors.black26),
-    checkColor: WidgetStatePropertyAll(Colors.red),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    border: InputBorder.none,
-    iconColor: Colors.white,
-    prefixIconColor: Colors.white,
-    fillColor: Colors.grey.shade900,
-    hintStyle: const TextStyle(
-      color: Color.fromARGB(255, 195, 195, 195),
-    ),
-  ),
-  iconTheme: const IconThemeData(
-    color: Colors.white,
-  ),
-  dialogTheme: DialogThemeData(
-    backgroundColor: Colors.grey.shade900,
-    contentTextStyle: const TextStyle(
-      color: Colors.white,
-    ),
-  ),
-  textButtonTheme: TextButtonThemeData(
-    style: ButtonStyle(
-      foregroundColor: WidgetStateProperty.all(Colors.white),
-    ),
-  ),
-  buttonTheme: const ButtonThemeData(
-    buttonColor: Colors.red,
-  ),
-  tabBarTheme: const TabBarThemeData(
-    labelColor: Colors.white,
-    indicatorColor: Colors.amber,
-  ),
-  iconButtonTheme: IconButtonThemeData(
-    style: ButtonStyle(
-      iconColor: WidgetStateProperty.all(Colors.white),
-      foregroundColor: WidgetStateProperty.all(Colors.white),
-    ),
-  ),
-  snackBarTheme: SnackBarThemeData(
-    backgroundColor: (Colors.grey.shade900),
-    contentTextStyle: const TextStyle(
-      color: Colors.white,
-    ),
-    actionTextColor: Colors.yellow,
-  ),
-  drawerTheme: const DrawerThemeData(
-    backgroundColor: Colors.black,
-    scrimColor: Colors.black,
-    shadowColor: Colors.black,
-    surfaceTintColor: Colors.black,
-  ),
-  textTheme: const TextTheme(
-    titleLarge: TextStyle(
-      color: Colors.white,
-    ),
-    titleMedium: TextStyle(
-      color: Colors.white,
-    ),
-    titleSmall: TextStyle(
-      color: Colors.white,
-    ),
-    bodyLarge: TextStyle(
-      color: Colors.white,
-    ),
-    bodyMedium: TextStyle(
-      color: Colors.white,
-    ),
-    bodySmall: TextStyle(
-      color: Colors.white,
-    ),
-  ),
-  dividerTheme: const DividerThemeData(
-    color: Colors.white,
-    thickness: 0,
-    endIndent: 0,
-    indent: 0,
-    space: 0,
-  ),
-  cardColor: Colors.grey.shade900,
-  listTileTheme: const ListTileThemeData(
-    textColor: Colors.white,
-    iconColor: Colors.white,
-  ),
-  expansionTileTheme: const ExpansionTileThemeData(
-    textColor: Colors.white,
-    collapsedTextColor: Colors.white,
-    collapsedIconColor: Colors.white,
-    iconColor: Colors.red,
-  ),
-  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-    backgroundColor: Colors.black,
-    selectedItemColor: Colors.white,
-    selectedIconTheme: IconThemeData(
-      color: Colors.white,
-    ),
-  ),
+final ThemeData appDarkThemeData = _buildTheme(
+  brightness: Brightness.dark,
+  tokens: AppThemeTokens.dark,
 );
 
-//LIGHT THEME
-//LIGHT THEME
-//LIGHT THEME
-final ThemeData appLightThemeData = ThemeData.light().copyWith(
-  primaryColor: Colors.black,
-  visualDensity: VisualDensity.adaptivePlatformDensity,
-  scaffoldBackgroundColor: Colors.white,
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Colors.white,
-    iconTheme: IconThemeData(
-      color: Colors.black,
-    ),
-    foregroundColor: Colors.black,
-  ),
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ButtonStyle(
-      backgroundColor: WidgetStateProperty.all(Colors.grey.shade500),
-      foregroundColor: WidgetStateProperty.all(Colors.black),
-    ),
-  ),
-  floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: Colors.white,
-    foregroundColor: Colors.grey.shade900,
-  ),
-  badgeTheme: BadgeThemeData(
-    textColor: Colors.grey.shade900,
-  ),
-
-  switchTheme: const SwitchThemeData(
-    thumbColor: WidgetStatePropertyAll(Colors.red),
-    trackColor: WidgetStatePropertyAll(Colors.white),
-  ),
-  radioTheme: const RadioThemeData(
-    fillColor: WidgetStatePropertyAll(Colors.red),
-  ),
-  checkboxTheme: const CheckboxThemeData(
-    fillColor: WidgetStatePropertyAll(Colors.black26),
-    checkColor: WidgetStatePropertyAll(Colors.red),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    border: InputBorder.none,
-    iconColor: Colors.grey.shade900,
-    prefixIconColor: Colors.grey.shade900,
-    fillColor: Colors.grey.shade300,
-    hintStyle: TextStyle(
-      color: Colors.grey.shade500,
-    ),
-  ),
-  iconTheme: const IconThemeData(
-    color: Colors.black,
-  ),
-  dialogTheme: DialogThemeData(
-    backgroundColor: Colors.grey.shade900,
-    contentTextStyle: const TextStyle(
-      color: Colors.white,
-    ),
-  ),
-  textButtonTheme: TextButtonThemeData(
-    style: ButtonStyle(
-      foregroundColor: WidgetStateProperty.all(Colors.white),
-    ),
-  ),
-  buttonTheme: const ButtonThemeData(
-    buttonColor: Colors.red,
-  ),
-  tabBarTheme: const TabBarThemeData(
-    labelColor: Colors.white,
-    indicatorColor: Colors.amber,
-  ),
-  iconButtonTheme: IconButtonThemeData(
-    style: ButtonStyle(
-      iconColor: WidgetStateProperty.all(Colors.black),
-      foregroundColor: WidgetStateProperty.all(Colors.black),
-    ),
-  ),
-  snackBarTheme: const SnackBarThemeData(
-    backgroundColor: Color(0xFF3C4CBD),
-    contentTextStyle: TextStyle(
-      color: Colors.black,
-    ),
-    actionTextColor: Colors.yellow,
-  ),
-  // drawerTheme: const DrawerThemeData(
-  //   backgroundColor: Colors.white,
-  //   scrimColor: Colors.white,
-  //   shadowColor: Colors.white,
-  //   surfaceTintColor: Colors.white,
-  // ),
-  textTheme: const TextTheme(
-    titleLarge: TextStyle(
-      color: Colors.black,
-    ),
-    titleMedium: TextStyle(
-      color: Colors.black,
-    ),
-    titleSmall: TextStyle(
-      color: Colors.black,
-    ),
-    bodyLarge: TextStyle(
-      color: Colors.black,
-    ),
-    bodyMedium: TextStyle(
-      color: Colors.black,
-    ),
-    bodySmall: TextStyle(
-      color: Colors.black,
-    ),
-  ),
-  dividerTheme: const DividerThemeData(
-    color: Colors.white,
-    thickness: 0,
-    endIndent: 0,
-    indent: 0,
-    space: 0,
-  ),
-
-  cardColor: Colors.grey.shade400,
-  listTileTheme: const ListTileThemeData(
-    textColor: Colors.black,
-    iconColor: Colors.black,
-  ),
-  expansionTileTheme: const ExpansionTileThemeData(
-    textColor: Colors.black,
-    collapsedTextColor: Colors.black,
-    collapsedIconColor: Colors.black,
-    iconColor: Colors.red,
-  ),
-  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-    backgroundColor: Colors.white,
-    selectedItemColor: Colors.grey,
-    selectedIconTheme: IconThemeData(
-      color: Colors.black,
-    ),
-  ),
-  primaryTextTheme: const TextTheme(
-    bodyLarge: TextStyle(color: Colors.white),
-    bodyMedium: TextStyle(color: Colors.white),
-    bodySmall: TextStyle(color: Colors.white),
-    displayLarge: TextStyle(color: Colors.white),
-    displayMedium: TextStyle(color: Colors.white),
-    displaySmall: TextStyle(color: Colors.white),
-    headlineLarge: TextStyle(color: Colors.white),
-    headlineMedium: TextStyle(color: Colors.white),
-    headlineSmall: TextStyle(color: Colors.white),
-    labelLarge: TextStyle(color: Colors.white),
-    labelMedium: TextStyle(color: Colors.white),
-    labelSmall: TextStyle(color: Colors.white),
-    titleLarge: TextStyle(color: Colors.white),
-    titleMedium: TextStyle(color: Colors.white),
-    titleSmall: TextStyle(color: Colors.white),
-  ),
+final ThemeData appLightThemeData = _buildTheme(
+  brightness: Brightness.light,
+  tokens: AppThemeTokens.light,
 );
+
+ThemeData _buildTheme({
+  required Brightness brightness,
+  required AppThemeTokens tokens,
+}) {
+  final isDark = brightness == Brightness.dark;
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: tokens.accent,
+    brightness: brightness,
+    primary: tokens.accent,
+    surface: tokens.surface,
+    error: tokens.destructive,
+  );
+
+  final textTheme = (isDark ? ThemeData.dark() : ThemeData.light())
+      .textTheme
+      .apply(
+        bodyColor: tokens.text,
+        displayColor: tokens.text,
+      )
+      .copyWith(
+        titleLarge: TextStyle(
+          color: tokens.text,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        titleMedium: TextStyle(
+          color: tokens.text,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+        titleSmall: TextStyle(
+          color: tokens.text,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        bodyMedium: TextStyle(color: tokens.text, fontSize: 13),
+        bodySmall: TextStyle(color: tokens.textMuted, fontSize: 12),
+      );
+
+  final outlineBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(tokens.radiusMd),
+    borderSide: BorderSide(color: tokens.border),
+  );
+
+  return ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorScheme: colorScheme,
+    extensions: [tokens],
+    visualDensity: VisualDensity.adaptivePlatformDensity,
+    primaryColor: tokens.accent,
+    scaffoldBackgroundColor:
+        isDark ? const Color(0xFF0B1120) : const Color(0xFFF8FAFC),
+    cardColor: tokens.surfaceElevated,
+    dividerColor: tokens.border,
+    textTheme: textTheme,
+    primaryTextTheme: textTheme,
+    iconTheme: IconThemeData(color: tokens.textMuted, size: 20),
+    appBarTheme: AppBarTheme(
+      backgroundColor: tokens.surface,
+      foregroundColor: tokens.text,
+      elevation: 0,
+      centerTitle: false,
+      iconTheme: IconThemeData(color: tokens.textMuted),
+      titleTextStyle: TextStyle(
+        color: tokens.text,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: tokens.accent,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: tokens.accent.withValues(alpha: 0.45),
+        disabledForegroundColor: Colors.white70,
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.radiusMd),
+        ),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: tokens.accent,
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.radiusMd),
+        ),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: tokens.textMuted,
+        hoverColor: tokens.text.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
+        ),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: tokens.surfaceMuted,
+      hintStyle: TextStyle(color: tokens.textSubtle, fontSize: 13),
+      labelStyle: TextStyle(color: tokens.textMuted, fontSize: 13),
+      prefixIconColor: tokens.textSubtle,
+      suffixIconColor: tokens.textSubtle,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: outlineBorder,
+      enabledBorder: outlineBorder,
+      focusedBorder: outlineBorder.copyWith(
+        borderSide: BorderSide(color: tokens.accent, width: 1.4),
+      ),
+      errorBorder: outlineBorder.copyWith(
+        borderSide: BorderSide(color: tokens.destructive),
+      ),
+      focusedErrorBorder: outlineBorder.copyWith(
+        borderSide: BorderSide(color: tokens.destructive, width: 1.4),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: tokens.surfaceElevated,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
+        side: BorderSide(color: tokens.border),
+      ),
+    ),
+    listTileTheme: ListTileThemeData(
+      textColor: tokens.text,
+      iconColor: tokens.textMuted,
+      selectedColor: tokens.text,
+      selectedTileColor: tokens.accentSoft,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
+      ),
+      dense: true,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? tokens.accent
+            : tokens.textSubtle,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? tokens.accent.withValues(alpha: 0.30)
+            : tokens.surfaceMuted,
+      ),
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStatePropertyAll(tokens.accent),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? tokens.accent
+            : Colors.transparent,
+      ),
+      checkColor: const WidgetStatePropertyAll(Colors.white),
+      side: BorderSide(color: tokens.border),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: tokens.surfaceElevated,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
+      ),
+      titleTextStyle: TextStyle(
+        color: tokens.text,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+      contentTextStyle: TextStyle(color: tokens.textMuted, fontSize: 13),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: tokens.surfaceElevated,
+      contentTextStyle: TextStyle(color: tokens.text),
+      actionTextColor: tokens.accent,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: tokens.border,
+      thickness: 1,
+      space: 1,
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: tokens.accent,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: tokens.surfaceElevated,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
+        side: BorderSide(color: tokens.border),
+      ),
+      textStyle: TextStyle(color: tokens.text, fontSize: 13),
+    ),
+    tabBarTheme: TabBarThemeData(
+      labelColor: tokens.text,
+      unselectedLabelColor: tokens.textMuted,
+      indicatorColor: tokens.accent,
+      dividerColor: tokens.border,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: tokens.surface,
+      selectedItemColor: tokens.accent,
+      unselectedItemColor: tokens.textMuted,
+      elevation: 0,
+      selectedIconTheme: IconThemeData(color: tokens.accent),
+      unselectedIconTheme: IconThemeData(color: tokens.textMuted),
+    ),
+  );
+}

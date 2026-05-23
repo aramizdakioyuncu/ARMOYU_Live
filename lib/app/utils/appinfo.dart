@@ -1,6 +1,5 @@
 class AppInfo {
   static String appName = "ARMOYU - Topluluğu ve Grupları";
-  static String appImage = "assets/images/applogo.png";
   static List appCreators = [];
   static DateTime appReleaseDate = DateTime.now();
   static String appVersion = "";

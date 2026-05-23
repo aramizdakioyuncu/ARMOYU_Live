@@ -8,6 +8,7 @@ import 'package:armoyu_desktop/app/widgets/message_sendfield.dart';
 import 'package:armoyu_desktop/app/widgets/message_widget.dart';
 import 'package:armoyu_desktop/app/widgets/room_create_widget.dart';
 import 'package:armoyu_desktop/app/widgets/room_widget.dart';
+import 'package:armoyu_desktop/app/widgets/ui/app_ui.dart';
 import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -16,11 +17,48 @@ import 'package:get/get.dart';
 
 class GroupWidget {
   static Widget pageDetail(BuildContext context, Group group) {
-    final mainScrollController = ScrollController().obs;
-    final membersScrollController = ScrollController().obs;
-    final socketio = Get.find<SocketioControllerV2>();
-    final chattextcontroller = TextEditingController().obs;
-    final homeController = Get.put(HomeController());
+    return _GroupPage(group: group);
+  }
+}
+
+class _GroupPage extends StatefulWidget {
+  final Group group;
+
+  const _GroupPage({required this.group});
+
+  @override
+  State<_GroupPage> createState() => _GroupPageState();
+}
+
+class _GroupPageState extends State<_GroupPage> {
+  final mainScrollController = ScrollController();
+  final membersScrollController = ScrollController();
+  final chattextcontroller = TextEditingController().obs;
+  late final SocketioControllerV2 socketio;
+  late final HomeController homeController;
+
+  Group get group => widget.group;
+
+  @override
+  void initState() {
+    super.initState();
+    socketio = Get.find<SocketioControllerV2>();
+    homeController = Get.find<HomeController>();
+  }
+
+  @override
+  void dispose() {
+    mainScrollController.dispose();
+    membersScrollController.dispose();
+    chattextcontroller.value.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
 
     return Row(
       children: [
@@ -28,7 +66,7 @@ class GroupWidget {
         SizedBox(
           width: 240,
           child: Container(
-            color: const Color(0xFF111111),
+            color: surfaceColor,
             child: Column(
               children: [
                 // Grup başlığı
@@ -45,28 +83,15 @@ class GroupWidget {
                       const SizedBox(height: 8),
 
                       // Kanal başlığı
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        child: Row(
-                          children: [
-                            const Text(
-                              "KANALLAR",
-                              style: TextStyle(
-                                color: Color(0xFF555555),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const Spacer(),
-                            _SidebarIconBtn(
-                              icon: Icons.add,
-                              tooltip: "Kanal Oluştur",
-                              onTap: () => RoomCreateWidget.showAlertDialog(
-                                  context, group, socketio),
-                            ),
-                          ],
+                      AppSectionLabel(
+                        label: "KANALLAR",
+                        trailing: AppIconAction(
+                          icon: Icons.add,
+                          tooltip: "Kanal Oluştur",
+                          size: 24,
+                          iconSize: 16,
+                          onTap: () => RoomCreateWidget.showAlertDialog(
+                              context, group, socketio),
                         ),
                       ),
 
@@ -129,14 +154,12 @@ class GroupWidget {
                                     children: [
                                       RawScrollbar(
                                         thickness: 4,
-                                        controller:
-                                            mainScrollController.value,
+                                        controller: mainScrollController,
                                         radius: const Radius.circular(4),
                                         thumbVisibility: true,
                                         child: ListView.builder(
                                           reverse: true,
-                                          controller:
-                                              mainScrollController.value,
+                                          controller: mainScrollController,
                                           padding: const EdgeInsets.only(
                                               top: 8, bottom: 4),
                                           itemCount: socketio
@@ -155,8 +178,7 @@ class GroupWidget {
                                         ),
                                       ),
                                       // Bağlantı uyarısı
-                                      Obx(() => socketio
-                                              .socketChatStatus.value
+                                      Obx(() => socketio.socketChatStatus.value
                                           ? const SizedBox.shrink()
                                           : Positioned(
                                               bottom: 8,
@@ -164,13 +186,13 @@ class GroupWidget {
                                               right: 0,
                                               child: Center(
                                                 child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          horizontal: 14,
-                                                          vertical: 6),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 6),
                                                   decoration: BoxDecoration(
-                                                    color: const Color(
-                                                        0xFF1E1E1E),
+                                                    color:
+                                                        const Color(0xFF1E1E1E),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             20),
@@ -238,8 +260,7 @@ class GroupWidget {
                                 : _MembersPanel(
                                     group: group,
                                     socketio: socketio,
-                                    scrollController:
-                                        membersScrollController.value,
+                                    scrollController: membersScrollController,
                                   ),
                           )),
                     ],
@@ -264,20 +285,28 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+    final textColor =
+        theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final mutedColor = textColor.withValues(alpha: 0.58);
+    final borderColor = theme.dividerColor.withValues(alpha: 0.35);
+
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(bottom: BorderSide(color: Color(0xFF1E1E1E))),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               group.name,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textColor,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 overflow: TextOverflow.ellipsis,
@@ -285,12 +314,12 @@ class _GroupHeader extends StatelessWidget {
             ),
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                color: Color(0xFF888888), size: 20),
-            color: const Color(0xFF1E1E1E),
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: mutedColor, size: 20),
+            color: surfaceColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: Color(0xFF2A2A2A)),
+              side: BorderSide(color: borderColor),
             ),
             onSelected: (value) {
               if (value == "takviye") {
@@ -298,8 +327,7 @@ class _GroupHeader extends StatelessWidget {
                     parameters: {"group": group.groupID.toString()});
               }
               if (value == "olustur") {
-                RoomCreateWidget.showAlertDialog(
-                    Get.context!, group, socketio);
+                RoomCreateWidget.showAlertDialog(Get.context!, group, socketio);
               }
             },
             itemBuilder: (_) => [
@@ -315,19 +343,26 @@ class _GroupHeader extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<String> _menuItem(
-      String value, String label, IconData icon) {
+  PopupMenuItem<String> _menuItem(String value, String label, IconData icon) {
     return PopupMenuItem(
       value: value,
       height: 36,
-      child: Row(
-        children: [
-          Icon(icon, size: 15, color: const Color(0xFF888888)),
-          const SizedBox(width: 10),
-          Text(label,
-              style: const TextStyle(
-                  color: Color(0xFFCCCCCC), fontSize: 13)),
-        ],
+      child: Builder(
+        builder: (context) {
+          final textColor = Theme.of(context).textTheme.bodyMedium?.color ??
+              Theme.of(context).colorScheme.onSurface;
+
+          return Row(
+            children: [
+              Icon(icon, size: 15, color: textColor.withValues(alpha: 0.58)),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(color: textColor, fontSize: 13),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -342,8 +377,7 @@ class _GroupBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () =>
-          RoomCreateWidget.showAlertDialog(context, group, socketio),
+      onTap: () => RoomCreateWidget.showAlertDialog(context, group, socketio),
       child: Container(
         height: 120,
         margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -351,8 +385,7 @@ class _GroupBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           color: const Color(0xFF1A1A1A),
           image: DecorationImage(
-            image: CachedNetworkImageProvider(
-                group.logo.mediaURL.minURL.value),
+            image: CachedNetworkImageProvider(group.logo.mediaURL.minURL.value),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black.withValues(alpha: 0.3),
@@ -381,8 +414,7 @@ class _GroupBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: 0.2,
-                      backgroundColor:
-                          Colors.black.withValues(alpha: 0.5),
+                      backgroundColor: Colors.black.withValues(alpha: 0.5),
                       color: Colors.red,
                       minHeight: 4,
                     ),
@@ -409,24 +441,31 @@ class _ContentHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+    final textColor =
+        theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final mutedColor = textColor.withValues(alpha: 0.58);
+    final borderColor = theme.dividerColor.withValues(alpha: 0.35);
+
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(bottom: BorderSide(color: Color(0xFF1E1E1E))),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Row(
         children: [
           Obx(() {
             if (!socketio.isInRoom(group)) {
               return Row(children: [
-                const Icon(Icons.group_outlined,
-                    color: Color(0xFF555555), size: 18),
+                Icon(Icons.group_outlined, color: mutedColor, size: 18),
                 const SizedBox(width: 8),
                 Text(group.name,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: textColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600)),
               ]);
@@ -437,24 +476,22 @@ class _ContentHeader extends StatelessWidget {
                 room.type == RoomType.text
                     ? Icons.tag_rounded
                     : Icons.volume_up_rounded,
-                color: const Color(0xFF555555),
+                color: mutedColor,
                 size: 18,
               ),
               const SizedBox(width: 6),
               Obx(() => Text(
                     room.name.value,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: textColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600),
                   )),
             ]);
           }),
           const Spacer(),
-          _HeaderBtn(
-              icon: Icons.notifications_none_rounded, onTap: () {}),
-          _HeaderBtn(
-              icon: Icons.push_pin_outlined, onTap: () {}),
+          _HeaderBtn(icon: Icons.notifications_none_rounded, onTap: () {}),
+          _HeaderBtn(icon: Icons.push_pin_outlined, onTap: () {}),
           Obx(() => _HeaderBtn(
                 icon: Icons.group_outlined,
                 active: homeController.showMembers.value,
@@ -462,39 +499,12 @@ class _ContentHeader extends StatelessWidget {
                     !homeController.showMembers.value,
               )),
           const SizedBox(width: 4),
-          Container(
+          const SizedBox(
             width: 110,
             height: 28,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFF252525)),
-            ),
-            child: const Row(
-              children: [
-                SizedBox(width: 8),
-                Icon(Icons.search, size: 14, color: Color(0xFF555555)),
-                SizedBox(width: 4),
-                Expanded(
-                  child: TextField(
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Ara",
-                      hintStyle: TextStyle(
-                          color: Color(0xFF444444), fontSize: 12),
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: AppSearchField(),
           ),
-          _HeaderBtn(
-              icon: Icons.help_outline_rounded, onTap: () {}),
+          _HeaderBtn(icon: Icons.help_outline_rounded, onTap: () {}),
         ],
       ),
     );
@@ -514,33 +524,14 @@ class _HeaderBtn extends StatefulWidget {
 }
 
 class _HeaderBtnState extends State<_HeaderBtn> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: _hovered ? const Color(0xFF1E1E1E) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 18,
-            color: widget.active
-                ? Colors.white
-                : (_hovered
-                    ? const Color(0xFFCCCCCC)
-                    : const Color(0xFF666666)),
-          ),
-        ),
-      ),
+    return AppIconAction(
+      icon: widget.icon,
+      active: widget.active,
+      onTap: widget.onTap,
+      size: 32,
+      iconSize: 18,
     );
   }
 }
@@ -557,6 +548,12 @@ class _VideoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor = theme.colorScheme.surface;
+    final textColor =
+        theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final borderColor = theme.dividerColor.withValues(alpha: 0.35);
+
     return SizedBox(
       height: 280,
       child: Stack(
@@ -569,10 +566,9 @@ class _VideoSection extends StatelessWidget {
                       height: 180,
                       width: 280,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0A0A0A),
+                        color: surfaceColor,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: const Color(0xFF2A2A2A)),
+                        border: Border.all(color: borderColor),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: homeController.connectionState.value ==
@@ -589,7 +585,7 @@ class _VideoSection extends StatelessWidget {
                                     height: 48,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF1E1E1E),
+                                      color: textColor.withValues(alpha: 0.08),
                                     ),
                                     child: ClipOval(
                                       child: CachedNetworkImage(
@@ -608,12 +604,14 @@ class _VideoSection extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 6),
                                   Obx(() => Text(
-                                        AppList.sessions.first.currentUser
-                                                .user.userName?.value ??
+                                        AppList.sessions.first.currentUser.user
+                                                .userName?.value ??
                                             "",
-                                        style: const TextStyle(
-                                            color: Color(0xFF888888),
-                                            fontSize: 11),
+                                        style: TextStyle(
+                                          color:
+                                              textColor.withValues(alpha: 0.58),
+                                          fontSize: 11,
+                                        ),
                                       )),
                                 ],
                               ),
@@ -631,11 +629,9 @@ class _VideoSection extends StatelessWidget {
                               height: 80,
                               margin: const EdgeInsets.only(right: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0A0A0A),
-                                borderRadius:
-                                    BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: const Color(0xFF2A2A2A)),
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: borderColor),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: webrtc.RTCVideoView(
@@ -656,13 +652,12 @@ class _VideoSection extends StatelessWidget {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A).withValues(alpha: 0.9),
+                  color: surfaceColor.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(30),
-                  border:
-                      Border.all(color: const Color(0xFF2A2A2A)),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -673,18 +668,18 @@ class _VideoSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Obx(() => _VoiceBtn(
-                          icon: AppList.sessions.first.currentUser
-                                      .microphone.value ==
+                          icon: AppList.sessions.first.currentUser.microphone
+                                      .value ==
                                   true
                               ? Icons.mic_outlined
                               : Icons.mic_off_outlined,
-                          active: AppList.sessions.first.currentUser
-                              .microphone.value,
-                          isDestructive: AppList.sessions.first
-                                  .currentUser.microphone.value !=
+                          active: AppList
+                              .sessions.first.currentUser.microphone.value,
+                          isDestructive: AppList.sessions.first.currentUser
+                                  .microphone.value !=
                               true,
-                          onTap: () => socketio.micOnOff(
-                              AppList.sessions.first.currentUser),
+                          onTap: () => socketio
+                              .micOnOff(AppList.sessions.first.currentUser),
                         )),
                     const SizedBox(width: 6),
                     _VoiceBtn(
@@ -726,9 +721,7 @@ class _VoiceBtnState extends State<_VoiceBtn> {
   Widget build(BuildContext context) {
     Color bg = widget.isDestructive
         ? Colors.red
-        : (widget.active
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFF333333));
+        : (widget.active ? const Color(0xFF2A2A2A) : const Color(0xFF333333));
     if (_hovered && !widget.isDestructive) {
       bg = const Color(0xFF3A3A3A);
     }
@@ -781,9 +774,7 @@ class _EmptyRoomState extends StatelessWidget {
           Text(
             group.name,
             style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700),
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -808,18 +799,25 @@ class _MembersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+    final sectionTextColor =
+        (theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface)
+            .withValues(alpha: 0.48);
+
     return Container(
       width: 240,
-      color: const Color(0xFF111111),
+      color: surfaceColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               "ÜYELEr",
               style: TextStyle(
-                color: Color(0xFF555555),
+                color: sectionTextColor,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1,
@@ -834,10 +832,8 @@ class _MembersPanel extends StatelessWidget {
                   child: ListView.builder(
                     controller: scrollController,
                     padding: const EdgeInsets.only(bottom: 8),
-                    itemCount: socketio
-                        .findcurrentGroup(group)
-                        .groupmembers!
-                        .length,
+                    itemCount:
+                        socketio.findcurrentGroup(group).groupmembers!.length,
                     itemBuilder: (context, index) {
                       return Obx(() => GroupMemberWidget.listtile(
                             socketio
@@ -849,54 +845,6 @@ class _MembersPanel extends StatelessWidget {
                 )),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SidebarIconBtn extends StatefulWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  const _SidebarIconBtn(
-      {required this.icon, required this.tooltip, required this.onTap});
-
-  @override
-  State<_SidebarIconBtn> createState() => _SidebarIconBtnState();
-}
-
-class _SidebarIconBtnState extends State<_SidebarIconBtn> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: widget.tooltip,
-      textStyle: const TextStyle(color: Colors.white, fontSize: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
-      ),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: _hovered
-                  ? const Color(0xFF2A2A2A)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(widget.icon,
-                size: 14,
-                color: _hovered ? Colors.white : const Color(0xFF666666)),
-          ),
-        ),
       ),
     );
   }

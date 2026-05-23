@@ -1,5 +1,6 @@
 import 'package:armoyu_desktop/app/data/models/group_member_model.dart';
 import 'package:armoyu_desktop/app/services/socketio_controller.dart';
+import 'package:armoyu_desktop/app/theme/app_theme_tokens.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -26,6 +27,8 @@ class _MemberTileState extends State<_MemberTile> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
+
     return Obx(() {
       return MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
@@ -35,13 +38,12 @@ class _MemberTileState extends State<_MemberTile> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 120),
             margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: _hovered
-                  ? const Color(0xFF1E1E1E)
+                  ? tokens.text.withValues(alpha: 0.08)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(tokens.radiusSm),
             ),
             child: Row(
               children: [
@@ -53,17 +55,18 @@ class _MemberTileState extends State<_MemberTile> {
                       height: 32,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF2A2A2A),
+                        color: tokens.surfaceMuted,
                       ),
                       child: ClipOval(
                         child: CachedNetworkImage(
                           imageUrl: widget.member.user.value.user.avatar!
                               .mediaURL.minURL.value,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(
-                              Icons.person,
-                              color: Colors.white54,
-                              size: 18),
+                          errorWidget: (_, __, ___) => Icon(
+                            Icons.person,
+                            color: tokens.textSubtle,
+                            size: 18,
+                          ),
                         ),
                       ),
                     ),
@@ -77,8 +80,9 @@ class _MemberTileState extends State<_MemberTile> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.green.shade400,
-                          border: const Border.fromBorderSide(BorderSide(
-                              color: Color(0xFF111111), width: 1.5)),
+                          border: Border.fromBorderSide(
+                            BorderSide(color: tokens.surface, width: 1.5),
+                          ),
                         ),
                       ),
                     ),
@@ -94,9 +98,7 @@ class _MemberTileState extends State<_MemberTile> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: _hovered
-                              ? Colors.white
-                              : const Color(0xFFCCCCCC),
+                          color: _hovered ? tokens.text : tokens.textMuted,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -104,9 +106,9 @@ class _MemberTileState extends State<_MemberTile> {
                         widget.member.currentRoom.value == null
                             ? widget.member.description
                             : widget.member.currentRoom.value!.name.value,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF666666),
+                          color: tokens.textSubtle,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

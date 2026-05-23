@@ -19,6 +19,13 @@ class ChatController extends GetxController {
   Rxn<APIChatList> chat = Rxn(null);
   Rx<APIChat> chatCategory = Rx(APIChat.ozel);
 
+  @override
+  void onClose() {
+    chattextcontroller.value.dispose();
+    chatScrollController.value.dispose();
+    super.onClose();
+  }
+
   changeChat(APIChatList chatINFO) {
     chathistory.value = [];
     chat.value = chatINFO;
@@ -26,13 +33,17 @@ class ChatController extends GetxController {
   }
 
   fetchChatHistory(int chatID) async {
-    ChatFetchDetailResponse response =
-        await ARMOYU.service.chatServices.fetchdetailChat(
-      chatID: chatID,
-      chatCategory: chatCategory.value,
-    );
+    ChatFetchDetailResponse response;
+    try {
+      response = await ARMOYU.service.chatServices.fetchdetailChat(
+        chatID: chatID,
+        chatCategory: chatCategory.value,
+      );
+    } catch (_) {
+      return;
+    }
 
-    if (!response.result.status) {
+    if (!response.result.status || response.response == null) {
       return;
     }
 

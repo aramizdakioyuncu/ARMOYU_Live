@@ -23,10 +23,16 @@ class LoginController extends GetxController {
   }
 
   @override
-  // ignore: unnecessary_overrides
   void onInit() {
     super.onInit();
     _loadRememberedCredentials();
+  }
+
+  @override
+  void onClose() {
+    usernameController.value.dispose();
+    userpasswordController.value.dispose();
+    super.onClose();
   }
 
   Future<void> _loadRememberedCredentials() async {
@@ -73,20 +79,33 @@ class LoginController extends GetxController {
 
     loginErrorMessage.value = null;
     loginprocess.value = true;
-    LoginResponse response = await ARMOYU.service.authServices.login(
-      username: username,
-      password: password,
-    );
-
+    late LoginResponse response;
+    try {
+      response = await ARMOYU.service.authServices.login(
+        username: username,
+        password: password,
+      );
+    } catch (_) {
+      loginErrorMessage.value = "Sunucuya bağlanılamadı.";
+      loginprocess.value = false;
+      return;
+    }
     loginprocess.value = false;
 
     if (!response.result.status) {
-      loginErrorMessage.value = "Giriş başarısız oldu.";
+      loginErrorMessage.value = response.result.description.isNotEmpty
+          ? response.result.description
+          : "Giriş başarısız oldu.";
       return;
     }
 
     if (response.result.description == "Oyuncu bilgileri yanlış!") {
       loginErrorMessage.value = "Şifre yanlış girildi.";
+      return;
+    }
+
+    if (response.response == null) {
+      loginErrorMessage.value = "Kullanıcı bilgileri alınamadı.";
       return;
     }
 

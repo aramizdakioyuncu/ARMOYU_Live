@@ -21,7 +21,7 @@ class HomeView extends StatelessWidget {
     final controller = Get.put(HomeController());
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           Column(
@@ -78,8 +78,17 @@ class _GroupRail extends StatelessWidget {
 
     controller.socketio.fetchUserList(groupID: groupID);
 
-    final GroupRoomsResponse response =
-        await ARMOYU.service.groupServices.groupRoomsFetch(groupID: groupID);
+    GroupRoomsResponse response;
+    try {
+      response =
+          await ARMOYU.service.groupServices.groupRoomsFetch(groupID: groupID);
+    } catch (_) {
+      return;
+    }
+
+    if (!response.result.status || response.response == null) {
+      return;
+    }
 
     AppList.groups[index].rooms!.value = [];
     for (GroupRoom element in response.response!) {
@@ -99,7 +108,8 @@ class _GroupRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 64,
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).appBarTheme.backgroundColor ??
+          Theme.of(context).colorScheme.surface,
       child: Column(
         children: [
           // ARMOYU home logo
@@ -264,8 +274,7 @@ class _RailExploreBtnState extends State<_RailExploreBtn> {
                 color: _hovered
                     ? const Color(0xFF2A2A2A)
                     : const Color(0xFF1A1A1A),
-                borderRadius:
-                    BorderRadius.circular(_hovered ? 14 : 21),
+                borderRadius: BorderRadius.circular(_hovered ? 14 : 21),
               ),
               child: Icon(
                 Icons.explore_outlined,
@@ -318,8 +327,7 @@ class _AddGroupBtnState extends State<_AddGroupBtn> {
                   color: _hovered
                       ? Colors.green.withValues(alpha: 0.2)
                       : const Color(0xFF1A1A1A),
-                  borderRadius:
-                      BorderRadius.circular(_hovered ? 14 : 21),
+                  borderRadius: BorderRadius.circular(_hovered ? 14 : 21),
                 ),
                 child: Icon(
                   Icons.add_rounded,
@@ -516,9 +524,8 @@ class _CallActionBtnState extends State<_CallActionBtn> {
           duration: const Duration(milliseconds: 120),
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
-            color: _hovered
-                ? widget.color
-                : widget.color.withValues(alpha: 0.15),
+            color:
+                _hovered ? widget.color : widget.color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
