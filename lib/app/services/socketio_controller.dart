@@ -330,20 +330,25 @@ class SocketioControllerV2 extends GetxController {
         log(socketPREFIX + data.toString());
       }
     });
-    // Bağlantı başarılı olduğunda
+    // Bağlantı başarılı olduğunda (ilk bağlantı + yeniden bağlantı)
     socket.on('connect', (data) {
       log('${socketPREFIX}Bağlandı');
-
-      if (data != null) {
-        log(socketPREFIX + data.toString());
-      }
       socketChatStatus.value = true;
 
-      // Kullanıcıyı kaydet
       if (AppList.sessions.isEmpty) return;
+
+      // Kullanıcıyı kaydet
       registerUser(
-          AppList.sessions.first.currentUser.user.userName!.value.toString(),
-          AppList.sessions.first.currentUser.toJson());
+        AppList.sessions.first.currentUser.user.userName!.value.toString(),
+        AppList.sessions.first.currentUser.toJson(),
+      );
+
+      // Yeniden bağlanmada oda bilgisini geri gönder (sunucu state'i sıfırlar)
+      final currentRoom = findmyRoomanyWhereGroup();
+      if (currentRoom != null) {
+        log('${socketPREFIX}Yeniden bağlantı: oda geri gönderiliyor (${currentRoom.name.value})');
+        socket.emit('changeRoom', currentRoom.toJson());
+      }
     });
 
     // Bağlantı kesildiğinde
