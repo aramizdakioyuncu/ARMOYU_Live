@@ -675,8 +675,6 @@ class SocketioControllerV2 extends GetxController {
                     element.user.value.user.userID == userInfo.user.userID,
               );
 
-              log("Oda adı ${groupMember.currentRoom.value?.name}");
-
               groupMember.user.value = userInfo;
               groupMember.currentRoom.value = userRoom;
               groupfetch.groupmembers?.refresh();
@@ -1000,31 +998,55 @@ class SocketioControllerV2 extends GetxController {
       return;
     }
 
-    group.groupmembers = RxList([]);
+    group.groupmembers ??= RxList([]);
+
+    final apiIds = response.response!.user.map((e) => e.userID).toSet();
+
+    // Listeden ayrılanları kaldır (API'de artık yok)
+    group.groupmembers!.removeWhere(
+      (m) => !apiIds.contains(m.user.value.user.userID),
+    );
+
     for (UserInfo element in response.response!.user) {
-      group.groupmembers!.add(
-        Groupmember(
-          user: Player(
-            user: User(
-              userID: element.userID,
-              userName: Rx(element.username!),
-              displayName: Rx(element.displayname),
-              avatar: Media(
-                mediaID: 0,
-                mediaType: MediaType.image,
-                mediaURL: MediaURL(
-                  bigURL: Rx(element.avatar.bigURL),
-                  normalURL: Rx(element.avatar.normalURL),
-                  minURL: Rx(element.avatar.minURL),
+      final existing = _findMember(group.groupmembers, element.userID);
+      if (existing != null) {
+        // Var olan üyenin profil bilgisini güncelle, oda/socket state'i koru
+        existing.user.value.user.userName?.value = element.username ?? '';
+        existing.user.value.user.displayName?.value = element.displayname;
+        existing.user.value.user.avatar?.mediaURL.minURL.value =
+            element.avatar.minURL;
+        existing.user.value.user.avatar?.mediaURL.normalURL.value =
+            element.avatar.normalURL;
+        existing.user.value.user.avatar?.mediaURL.bigURL.value =
+            element.avatar.bigURL;
+      } else {
+        // Yeni üye ekle
+        group.groupmembers!.add(
+          Groupmember(
+            user: Player(
+              user: User(
+                userID: element.userID,
+                userName: Rx(element.username!),
+                displayName: Rx(element.displayname),
+                avatar: Media(
+                  mediaID: 0,
+                  mediaType: MediaType.image,
+                  mediaURL: MediaURL(
+                    bigURL: Rx(element.avatar.bigURL),
+                    normalURL: Rx(element.avatar.normalURL),
+                    minURL: Rx(element.avatar.minURL),
+                  ),
                 ),
               ),
-            ),
-          ).obs,
-          description: element.role.toString(),
-          status: 1,
-        ),
-      );
+            ).obs,
+            description: element.role.toString(),
+            status: 1,
+          ),
+        );
+      }
     }
+
+    group.groupmembers!.refresh();
 
     socket.emit('USER_LIST', {
       "groupID": groupID,
