@@ -78,6 +78,9 @@ class _GroupRail extends StatelessWidget {
 
     controller.socketio.fetchUserList(groupID: groupID);
 
+    // Odalar zaten yüklüyse tekrar çekme
+    if (AppList.groups[index].rooms?.isNotEmpty == true) return;
+
     GroupRoomsResponse response;
     try {
       response =
