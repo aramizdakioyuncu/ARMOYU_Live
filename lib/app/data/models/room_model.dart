@@ -24,19 +24,14 @@ class Room {
         limit = Rxn(limit),
         message = (message ?? []).obs; // Eğer null ise boş bir liste atanır
 
-  // Room nesnesini JSON'a çevirme
+  // Socket emit için minimal payload (messages ve currentMembers dahil değil)
   Map<String, dynamic> toJson() {
     return {
-      'groupID': groupID, // Group nesnesini JSON'a çevir
-      'roomID': roomID, // Group nesnesini JSON'a çevir
-      'name': name.value, // RxString'den değer al
-      'limit': limit.value, // RxInt'den değer al
-      'type': type.index, // Enum değerini indeks olarak kaydet
-      'message':
-          message.map((msg) => msg.toJson()).toList(), // Mesajları JSON'a çevir
-      'currentMembers': currentMembers
-          .map((member) => member.toJson())
-          .toList(), // Üyeleri JSON'a çevir
+      'groupID': groupID,
+      'roomID': roomID,
+      'name': name.value,
+      'limit': limit.value,
+      'type': type.index,
     };
   }
 
