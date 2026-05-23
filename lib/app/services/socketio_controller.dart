@@ -180,7 +180,6 @@ class SocketioControllerV2 extends GetxController {
     socket.on('ping', (data) {
       // Burada data yerine ping zamanı verilmez.
       pingValue.value = data; // Bu satırda hata var
-      log('${socketPREFIX}Ping: ${pingValue.value} ms'); // Log ile göster
     });
 
     // Pong mesajını dinle
@@ -199,8 +198,6 @@ class SocketioControllerV2 extends GetxController {
         // Ping süresini hesapla
         pingValue.value =
             pongReceivedTime.difference(lastPingTime!).inMilliseconds;
-        // log('Pong yanıtı alındı: $pingId');
-        log('Live📡Ping süresi: ${pingValue.value} ms');
 
         if (pingValue.value < 80) {
           internetConnectionStatus.value = InternetType.good;
@@ -769,40 +766,55 @@ class SocketioControllerV2 extends GetxController {
   void _updateUserMicState(int userID, bool micActive) {
     if (groups.value == null) return;
     for (final group in groups.value!) {
-      for (final member in group.groupmembers ?? []) {
+      for (final member in group.groupmembers ?? <Groupmember>[]) {
         if (member.user.value.user.userID == userID) {
           member.user.value.microphone.value = micActive;
-          group.groupmembers?.refresh();
+        }
+      }
+      for (final room in group.rooms ?? <Room>[]) {
+        for (final player in room.currentMembers) {
+          if (player.user.userID == userID) {
+            player.microphone.value = micActive;
+          }
         }
       }
     }
-    groups.refresh();
   }
 
   void _updateUserSpeakerState(int userID, bool speakerOn) {
     if (groups.value == null) return;
     for (final group in groups.value!) {
-      for (final member in group.groupmembers ?? []) {
+      for (final member in group.groupmembers ?? <Groupmember>[]) {
         if (member.user.value.user.userID == userID) {
           member.user.value.speaker.value = speakerOn;
-          group.groupmembers?.refresh();
+        }
+      }
+      for (final room in group.rooms ?? <Room>[]) {
+        for (final player in room.currentMembers) {
+          if (player.user.userID == userID) {
+            player.speaker.value = speakerOn;
+          }
         }
       }
     }
-    groups.refresh();
   }
 
   void _updateUserSpeaking(int userID, bool speaking) {
     if (groups.value == null) return;
     for (final group in groups.value!) {
-      for (final member in group.groupmembers ?? []) {
+      for (final member in group.groupmembers ?? <Groupmember>[]) {
         if (member.user.value.user.userID == userID) {
           member.user.value.isSpeaking.value = speaking;
-          group.groupmembers?.refresh();
+        }
+      }
+      for (final room in group.rooms ?? <Room>[]) {
+        for (final player in room.currentMembers) {
+          if (player.user.userID == userID) {
+            player.isSpeaking.value = speaking;
+          }
         }
       }
     }
-    groups.refresh();
   }
 
   // Socket.io ile mesaj gönderme
@@ -1079,6 +1091,7 @@ class SocketioControllerV2 extends GetxController {
     }
 
     try {
+      log('${socketPREFIX}changeRoom -> ${room?.name.value ?? 'null'}');
       socket.emitWithAck('changeRoom', room?.toJson(), ack: (data) {
         log('${socketPREFIX}changeRoom ack: $data ${_stateLog()}');
       });
