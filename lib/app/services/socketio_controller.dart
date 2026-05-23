@@ -500,8 +500,7 @@ class SocketioControllerV2 extends GetxController {
 
         for (final group in groups.value ?? []) {
           // Üyeyi groupmembers'a ekle/güncelle
-          Groupmember? gm = group.groupmembers?.firstWhereOrNull(
-              (m) => m.user.value.user.userID == user.user.userID);
+          Groupmember? gm = _findMember(group.groupmembers, user.user.userID);
           if (gm == null) {
             gm = Groupmember(user: user.obs, description: '-', status: 0);
             group.groupmembers?.add(gm);
@@ -547,8 +546,7 @@ class SocketioControllerV2 extends GetxController {
         _updateUserSpeaking(user.user.userID!, false);
 
         for (final group in groups.value ?? []) {
-          final gm = group.groupmembers?.firstWhereOrNull(
-              (m) => m.user.value.user.userID == user.user.userID);
+          final gm = _findMember(group.groupmembers, user.user.userID);
           gm?.currentRoom.value = null;
           for (final room in group.rooms ?? []) {
             room.currentMembers.removeWhere(
@@ -824,6 +822,15 @@ class SocketioControllerV2 extends GetxController {
   }
 
   // ─── YARDIMCI: kullanıcı state güncellemeleri ────────────────────────────
+
+  // RxList üzerinde firstWhereOrNull extension'ı çalışmadığı için for-loop ile arama
+  Groupmember? _findMember(RxList<Groupmember>? members, int? userID) {
+    if (members == null || userID == null) return null;
+    for (final m in members) {
+      if (m.user.value.user.userID == userID) return m;
+    }
+    return null;
+  }
 
   void _updateUserMicState(int userID, bool micActive) {
     if (groups.value == null) return;
