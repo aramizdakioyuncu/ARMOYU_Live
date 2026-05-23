@@ -631,12 +631,11 @@ class SocketioControllerV2 extends GetxController {
     socket.on('USER_LIST', (data) {
       try {
         var json = jsonDecode(data);
-
         log("${socketPREFIX}Member Count ${json.length}");
 
-        List<Map<Player, Room?>> tmpUserList = [];
+        // Online kullanıcı ID seti — sonunda offline olanları temizlemek için
+        final Set<int?> onlineIds = {};
 
-        //Üyeleri Dolaş
         for (var element in json) {
           Room? userRoom;
           if (element['room'] != null) {
@@ -644,125 +643,54 @@ class SocketioControllerV2 extends GetxController {
           }
 
           Player userInfo = Player.fromJson(element['clientId']);
+          onlineIds.add(userInfo.user.userID);
 
-          tmpUserList.add({userInfo: userRoom});
-
-          // Tüm grupları dolaş
           for (var groupfetch in groups.value!) {
-            //
-            bool kullanicivarmi = groupfetch.groupmembers!.any(
-              (element) =>
-                  element.user.value.user.userName == userInfo.user.userName,
-            );
+            final groupMember =
+                _findMember(groupfetch.groupmembers, userInfo.user.userID);
+            if (groupMember == null) continue;
 
-            if (!kullanicivarmi) {
-              //Kullanıcı YOKSA LİSTEYE EKLE
-              groupfetch.groupmembers!.add(
-                Groupmember(
-                  user: userInfo.obs,
-                  description: "-",
-                  status: 0,
-                ),
-              );
-            } else {
-              //Kullanıcı VARSA ODASINI GÜNCELLEME İŞLEMLERİ
-              var groupMember = groupfetch.groupmembers!.firstWhere(
-                (element) =>
-                    element.user.value.user.userID == userInfo.user.userID,
-              );
+            // Profil ve oda bilgisini güncelle
+            groupMember.user.value = userInfo;
+            groupMember.currentRoom.value = userRoom;
 
-              groupMember.user.value = userInfo;
-              groupMember.currentRoom.value = userRoom;
-              groupfetch.groupmembers?.refresh();
-              groups.refresh();
+            // Kullanıcıyı bu gruptaki tüm odalardan çıkar
+            for (var room in groupfetch.rooms!) {
+              room.currentMembers
+                  .removeWhere((m) => m.user.userID == userInfo.user.userID);
             }
 
-            //Kullanıcı bir odada mı
-            if (userRoom != null) {
-              try {
-                // Kullanıcıların Odaları Listeleniyor
-                bool roomExists = groupfetch.rooms!
-                    .any((room) => room.roomID == userRoom!.roomID);
-
-                // Eğer oda clientde listede yoksa, ekle
-                if (!roomExists) {
-                  if (userRoom.groupID == groupfetch.groupID) {
-                    groupfetch.rooms!.add(userRoom);
-                  }
-                }
-              } catch (e) {
-                log('${socketPREFIX}Hata (Kullanıcı Odaları Oluşturulamadı) : $e');
+            if (userRoom != null && userRoom.groupID == groupfetch.groupID) {
+              // Oda listede yoksa ekle
+              if (!groupfetch.rooms!.any((r) => r.roomID == userRoom!.roomID)) {
+                groupfetch.rooms!.add(userRoom);
               }
-              // try {
-              //   // Kullanıcının herhangi bir odada olup olmadığını kontrol ediyoruz
-              //   bool isUserinRoom = groupfetch.rooms!.any(
-              //     (room) => room.currentMembers.any(
-              //       (member) => member.username == userInfo.username,
-              //     ),
-              //   );
-
-              //   //Kullanıcı bir odada
-              //   if (isUserinRoom) {
-              //     var currentRoom = groupfetch.rooms!.firstWhere(
-              //       (room) => room.currentMembers
-              //           .any((member) => member.username == userInfo.username),
-              //     );
-
-              //     //Kullanıcı bir odada ama doğru odada değil
-              //     if (currentRoom != userRoom) {
-              //       //Kullanıcıyı yanlış odadan sil
-
-              //       for (var room in groupfetch.rooms!) {
-              //         room.currentMembers.removeWhere(
-              //             (member) => member.username == userInfo.username);
-              //       }
-
-              //       //Doğru Gruptaki odaya yerleştir
-              //       if (userRoom.groupID == groupfetch.groupID) {
-              //         groupfetch.rooms!
-              //             .firstWhere((room) => room.name == userRoom!.name)
-              //             .currentMembers
-              //             .add(userInfo);
-              //       }
-              //     }
-              //   } else {
-              //     //Kullanıcı herhangi bir odada değil odaya eklenecek
-
-              //     //Odaya eklemeden önce yinede gruptaki tüm odalarda Kullanıcının olma ihtimaline karşı silme
-              //     for (var room in groupfetch.rooms!) {
-              //       room.currentMembers.removeWhere(
-              //           (member) => member.username == userInfo.username);
-              //     }
-
-              //     if (userRoom.groupID == groupfetch.groupID) {
-              //       groupfetch.rooms!
-              //           .firstWhere((room) => room.name == userRoom!.name)
-              //           .currentMembers
-              //           .add(userInfo);
-              //     }
-              //   }
-              // } catch (e) {
-              //   log("'${socketPREFIX}Hata (Kullanıcı Odalar) -- $e'");
-              // }
-            } else {
-              //Odalarda değilse Sil
-              for (var room in groupfetch.rooms!) {
-                room.currentMembers.removeWhere(
-                    (member) => member.user.userID == userInfo.user.userID);
+              // Doğru odaya yerleştir
+              final targetRoom = groupfetch.rooms!
+                  .firstWhereOrNull((r) => r.roomID == userRoom!.roomID);
+              if (targetRoom != null &&
+                  !targetRoom.currentMembers
+                      .any((m) => m.user.userID == userInfo.user.userID)) {
+                targetRoom.currentMembers.add(userInfo);
               }
-            }
-
-            //
-            //Online olmayan Kullanıcıları listeden sil
-            try {
-              if (groupfetch.groupmembers!.isNotEmpty) {
-                removeNonMatchingUsers(groupfetch, tmpUserList);
-              }
-            } catch (e) {
-              log('${socketPREFIX}Hata (removeNonMatchingUsers) : $e');
             }
           }
         }
+
+        // Offline olan üyelerin oda bilgisini ve room.currentMembers'ını temizle
+        for (var groupfetch in groups.value!) {
+          for (var member in groupfetch.groupmembers ?? <Groupmember>[]) {
+            if (!onlineIds.contains(member.user.value.user.userID)) {
+              member.currentRoom.value = null;
+            }
+          }
+          for (var room in groupfetch.rooms ?? <Room>[]) {
+            room.currentMembers
+                .removeWhere((m) => !onlineIds.contains(m.user.userID));
+          }
+          groupfetch.groupmembers?.refresh();
+        }
+        groups.refresh();
       } catch (e) {
         log('${socketPREFIX}Hata (USER_LIST): $e');
       }
