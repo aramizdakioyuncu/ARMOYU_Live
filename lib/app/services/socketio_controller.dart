@@ -169,8 +169,8 @@ class SocketioControllerV2 extends GetxController {
 
   main() {
     // Socket.IO'ya bağlanma
-    socket = IO.io('http://socket.armoyu.com:2021', <String, dynamic>{
-      // socket = IO.io('http://localhost:2021', <String, dynamic>{
+    socket = IO.io('https://livesocket.armoyu.com', <String, dynamic>{
+      // socket = IO.io('http://localhost:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
