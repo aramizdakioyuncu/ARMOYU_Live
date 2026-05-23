@@ -343,7 +343,9 @@ class SocketioControllerV2 extends GetxController {
       final currentRoom = findmyRoomanyWhereGroup();
       if (currentRoom != null) {
         log('${socketPREFIX}Yeniden bağlantı: oda geri gönderiliyor (${currentRoom.name.value})');
-        socket.emit('changeRoom', currentRoom.toJson());
+        socket.emitWithAck('changeRoom', currentRoom.toJson(), ack: (data) {
+          log('${socketPREFIX}changeRoom (reconnect) ack: $data');
+        });
       }
     });
 
@@ -886,10 +888,12 @@ class SocketioControllerV2 extends GetxController {
 
   // Kullanıcıyı sunucuya kaydetme
   void registerUser(String name, dynamic clientId) {
-    socket.emit('REGISTER', {
+    socket.emitWithAck('REGISTER', {
       'name': name,
       'clientId': clientId,
       "groups": AppList.groups.map((g) => g.groupID).toList(),
+    }, ack: (data) {
+      log('${socketPREFIX}REGISTER ack: $data');
     });
   }
 
@@ -1022,27 +1026,29 @@ class SocketioControllerV2 extends GetxController {
   }
 
   void micOnOff(Player user) {
-    var speaker = user.speaker;
-    var mic = user.microphone;
-    mic.value = !mic.value;
+    final newMicState = !user.microphone.value;
+    final event = newMicState ? 'MIC_UNMUTE' : 'MIC_MUTE';
 
-    if (mic.value == true && speaker.value == false) {
-      speaker.value = true;
-    }
-
-    userUpdate(user);
-    socket.emit(mic.value ? 'MIC_UNMUTE' : 'MIC_MUTE');
+    socket.emitWithAck(event, null, ack: (data) {
+      log('$socketPREFIX$event ack: $data');
+      user.microphone.value = newMicState;
+      if (newMicState && user.speaker.value == false) {
+        user.speaker.value = true;
+      }
+      userUpdate(user);
+    });
   }
 
   void speakerOnOff(Player user) {
-    var speaker = user.speaker;
-    var mic = user.microphone;
+    final newSpeakerState = !user.speaker.value;
+    final event = newSpeakerState ? 'SPEAKER_UNMUTE' : 'SPEAKER_MUTE';
 
-    speaker.value = !speaker.value;
-    mic.value = speaker.value;
-
-    userUpdate(user);
-    socket.emit(speaker.value ? 'SPEAKER_UNMUTE' : 'SPEAKER_MUTE');
+    socket.emitWithAck(event, null, ack: (data) {
+      log('$socketPREFIX$event ack: $data');
+      user.speaker.value = newSpeakerState;
+      user.microphone.value = newSpeakerState;
+      userUpdate(user);
+    });
   }
 
   void changeroom(Room? room) {
@@ -1063,10 +1069,11 @@ class SocketioControllerV2 extends GetxController {
     }
 
     try {
-      log("oda değiştirildi");
-      socket.emit('changeRoom', room?.toJson());
+      socket.emitWithAck('changeRoom', room?.toJson(), ack: (data) {
+        log('${socketPREFIX}changeRoom ack: $data');
+      });
     } catch (e) {
-      log("${socketPREFIX}Hata(changeRoom) $e");
+      log('${socketPREFIX}Hata(changeRoom) $e');
     }
   }
 
