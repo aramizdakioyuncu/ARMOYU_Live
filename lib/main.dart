@@ -2,8 +2,10 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:armoyu_desktop/app/services/armoyu_services.dart';
+import 'package:armoyu_desktop/app/services/theme_controller.dart';
 import 'package:armoyu_desktop/app/utils/app.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/foundation.dart'; // kIsWeb için
@@ -15,6 +17,8 @@ Future<void> main() async {
   initializeWindowManager();
 
   await ARMOYU.service.setup();
+  final themeController = Get.put(ThemeController(), permanent: true);
+  await themeController.loadThemeMode();
 
   runApp(const App());
 }

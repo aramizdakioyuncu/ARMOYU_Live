@@ -1,6 +1,7 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
 import 'package:armoyu_desktop/app/data/models/session_model.dart';
 import 'package:armoyu_desktop/app/data/models/settingslist_model.dart';
+import 'package:armoyu_desktop/app/modules/settings/appearance/views/settings_appearance_view.dart';
 import 'package:armoyu_desktop/app/modules/settings/accounts/views/settings_account_view.dart';
 import 'package:armoyu_desktop/app/modules/settings/security/views/security_view.dart';
 import 'package:get/get.dart';
@@ -50,8 +51,9 @@ class AppList {
     ),
     SettingsList(
       title: "Arayüz",
-      description: "Kullanıcı Hesap ayarları",
+      description: "Tema ve görünüm ayarları",
       route: "account",
+      page: const SettingsAppearanceView(),
     ),
     SettingsList(
       title: "Bildirimler",

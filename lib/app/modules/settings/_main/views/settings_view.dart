@@ -36,7 +36,6 @@ class SettingsView extends StatelessWidget {
                         selected: controller.selectedItem.value == index,
                         onTap: () {
                           controller.selectedItem.value = index;
-                          controller.changepage();
                         },
                       ),
                     );
@@ -48,6 +47,14 @@ class SettingsView extends StatelessWidget {
         }
 
         Widget buildContent() {
+          final settingsPages = AppList.settingsList
+              .map<Widget>(
+                (item) => item.page is Widget
+                    ? item.page as Widget
+                    : const _ComingSoonSettingsView(),
+              )
+              .toList();
+
           return SizedBox(
             width: contentWidth,
             child: Column(
@@ -76,16 +83,14 @@ class SettingsView extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: PageView(
-                    controller: controller.pagecontroller.value,
-                    scrollDirection: Axis.vertical,
-                    onPageChanged: (value) {
-                      controller.selectedItem.value = value;
-                    },
-                    children: [
-                      AppList.settingsList[0].page,
-                      AppList.settingsList[1].page,
-                    ],
+                  child: Obx(
+                    () => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: KeyedSubtree(
+                        key: ValueKey<int>(controller.selectedItem.value),
+                        child: settingsPages[controller.selectedItem.value],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -131,6 +136,25 @@ class SettingsView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ComingSoonSettingsView extends StatelessWidget {
+  const _ComingSoonSettingsView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            'Bu ayar bölümü henüz hazırlanmadı.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }
