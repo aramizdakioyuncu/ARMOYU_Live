@@ -428,20 +428,22 @@ class SocketioControllerV2 extends GetxController {
     socket.on('chat', (data) {
       try {
         Message mm = Message.fromJson(data);
-        log("$socketPREFIX${mm.user.value.user.displayName!.value} - ${mm.message}");
+        log('$socketPREFIX[CHAT] ${mm.user.value.user.displayName?.value} — ${mm.message.value}');
 
-        try {
-          var selectedGroup = groups.value!
-              .firstWhere((group) => group.groupID == mm.room.value?.groupID);
-          var selectedRoom = selectedGroup.rooms!.firstWhere(
-              (room) => room.name.value == mm.room.value?.name.value);
+        final roomID = mm.room.value?.roomID;
+        final groupID = mm.room.value?.groupID;
+        if (roomID == null || groupID == null) return;
 
-          selectedRoom.message.add(mm);
+        final selectedGroup = groups.value?.firstWhereOrNull(
+          (group) => group.groupID == groupID,
+        );
+        if (selectedGroup == null) return;
 
-          log("Mesaj eklendi: ${mm.message.value}");
-        } catch (e) {
-          log("Mesaj ekleme hatası: $e");
-        }
+        final selectedRoom = selectedGroup.rooms
+            ?.firstWhereOrNull((room) => room.roomID == roomID);
+        if (selectedRoom == null) return;
+
+        selectedRoom.message.add(mm);
       } catch (e) {
         log('${socketPREFIX}Hata (chat): $e');
       }
