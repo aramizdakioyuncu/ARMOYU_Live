@@ -175,10 +175,6 @@ class SocketioControllerV2 extends GetxController {
       'autoConnect': true,
     });
 
-    // Her 1 saniyede bir kullanıcı listesini iste
-    startFetchingUserList(const Duration(minutes: 1));
-    // Her 1 saniyede bir kullanıcı listesini iste
-
     startPing(const Duration(seconds: 2));
     // Ping değerini güncelle
     socket.on('ping', (data) {
