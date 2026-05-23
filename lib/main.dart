@@ -41,7 +41,7 @@ Future<void> initializeWindowManager() async {
       () async {
         await windowManager.show();
         await windowManager.focus();
-        await windowManager.setResizable(false);
+        await windowManager.setResizable(true);
       },
     );
   } else {

@@ -51,11 +51,12 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
+    localStream?.getTracks().forEach((t) => t.stop());
+    peerConnection?.close();
     localRenderer.value.dispose();
     for (var renderer in remoteRenderers) {
       renderer.dispose();
     }
-
     super.onClose();
   }
 
@@ -146,10 +147,16 @@ class HomeController extends GetxController {
   }
 
   Future<void> init() async {
-    localStream = await webrtc.navigator.mediaDevices.getUserMedia({
-      "audio": true,
-      "video": true,
-    });
+    try {
+      localStream = await webrtc.navigator.mediaDevices.getUserMedia({
+        "audio": true,
+        "video": true,
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("Medya akışı alınamadı: $e");
+      }
+    }
 
     // Akışı bir renderer ile yerel videoda göster
     localRenderer.value.srcObject = localStream;
@@ -160,7 +167,7 @@ class HomeController extends GetxController {
       ]
     });
 
-    localStream!.getTracks().forEach((track) {
+    localStream?.getTracks().forEach((track) {
       peerConnection!.addTrack(track, localStream!);
     });
 
@@ -276,7 +283,7 @@ class HomeController extends GetxController {
       });
 
       // Yerel video akışına geri dönebiliriz
-      localStream!.getTracks().forEach((track) {
+      localStream?.getTracks().forEach((track) {
         peerConnection!.addTrack(track, localStream!);
       });
     } catch (e) {
@@ -293,7 +300,7 @@ class HomeController extends GetxController {
       final audioDevices =
           mediaDevices.where((device) => device.kind == 'audioinput').toList();
 
-      if (audioDevices.isNotEmpty) {
+      if (audioDevices.length >= 2) {
         final secondMicrophoneId = audioDevices[1].deviceId; // İkinci mikrofon
         final newStream = await webrtc.navigator.mediaDevices.getUserMedia({
           'audio': {'deviceId': secondMicrophoneId},

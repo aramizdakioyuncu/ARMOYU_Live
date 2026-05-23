@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 final ThemeData appDarkThemeData = ThemeData.dark().copyWith(
   primaryColor: Colors.white,
-  indicatorColor: Colors.amber,
   visualDensity: VisualDensity.adaptivePlatformDensity,
   scaffoldBackgroundColor: Colors.black,
   appBarTheme: const AppBarTheme(
-    color: Colors.black,
+    backgroundColor: Colors.black,
     foregroundColor: Colors.white,
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
@@ -61,6 +60,7 @@ final ThemeData appDarkThemeData = ThemeData.dark().copyWith(
   ),
   tabBarTheme: const TabBarThemeData(
     labelColor: Colors.white,
+    indicatorColor: Colors.amber,
   ),
   iconButtonTheme: IconButtonThemeData(
     style: ButtonStyle(
@@ -133,7 +133,6 @@ final ThemeData appDarkThemeData = ThemeData.dark().copyWith(
 //LIGHT THEME
 final ThemeData appLightThemeData = ThemeData.light().copyWith(
   primaryColor: Colors.black,
-  indicatorColor: Colors.amber,
   visualDensity: VisualDensity.adaptivePlatformDensity,
   scaffoldBackgroundColor: Colors.white,
   appBarTheme: const AppBarTheme(
@@ -196,6 +195,7 @@ final ThemeData appLightThemeData = ThemeData.light().copyWith(
   ),
   tabBarTheme: const TabBarThemeData(
     labelColor: Colors.white,
+    indicatorColor: Colors.amber,
   ),
   iconButtonTheme: IconButtonThemeData(
     style: ButtonStyle(

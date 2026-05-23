@@ -79,6 +79,8 @@ class SocketioControllerV2 extends GetxController {
   void onClose() {
     stopFetchingUserList();
     stopPing();
+    player.dispose();
+    speakingvoices.dispose();
     socket.disconnect();
     super.onClose();
   }
@@ -327,7 +329,6 @@ class SocketioControllerV2 extends GetxController {
       if (data != null) {
         log(socketPREFIX + data.toString());
       }
-      log(socketPREFIX + data.toString());
     });
     // Bağlantı başarılı olduğunda
     socket.on('connect', (data) {
@@ -339,6 +340,7 @@ class SocketioControllerV2 extends GetxController {
       socketChatStatus.value = true;
 
       // Kullanıcıyı kaydet
+      if (AppList.sessions.isEmpty) return;
       registerUser(
           AppList.sessions.first.currentUser.user.userName!.value.toString(),
           AppList.sessions.first.currentUser.toJson());
@@ -414,7 +416,6 @@ class SocketioControllerV2 extends GetxController {
       } catch (e) {
         log('${socketPREFIX}Hata (user_entry_activity): $e');
       }
-      log('${socketPREFIX}Bağlantı kesildi');
     });
 
     // Sunucudan gelen mesajları dinleme
@@ -532,7 +533,7 @@ class SocketioControllerV2 extends GetxController {
                     element.user.value.user.userID == userInfo.user.userID,
               );
 
-              log("Oda adı ${groupMember.currentRoom.value!.name}");
+              log("Oda adı ${groupMember.currentRoom.value?.name}");
 
               groupMember.user.value = userInfo;
               groupMember.currentRoom.value = userRoom;
@@ -695,7 +696,7 @@ class SocketioControllerV2 extends GetxController {
     var selectedGroup =
         groups.value!.firstWhere((group) => group.groupID == room.groupID);
     var selectedRoom = selectedGroup.rooms!
-        .firstWhere((room) => room.name.value == room.name.value);
+        .firstWhere((r) => r.roomID == room.roomID);
 
     Message message = Message(
       id: chat.chatID,
@@ -706,7 +707,7 @@ class SocketioControllerV2 extends GetxController {
     );
     selectedRoom.message.add(message);
 
-    socket.emit("chat", {message.toJson()});
+    socket.emit("chat", message.toJson());
   }
 
   void sendAudio(Uint8List base64Audio) {
@@ -715,7 +716,7 @@ class SocketioControllerV2 extends GetxController {
       base64Audio: base64Audio,
     );
 
-    socket.emit("audio", {audiomodel.toJson()});
+    socket.emit("audio", audiomodel.toJson());
   }
 
   // Socket.io birisini arama
@@ -978,7 +979,7 @@ class SocketioControllerV2 extends GetxController {
 
     currentgroup.rooms!.add(
       Room(
-        groupID: response.response!.roomID,
+        groupID: currentgroup.groupID,
         roomID: response.response!.roomID,
         name: response.response!.name,
         limit: response.response!.limit,

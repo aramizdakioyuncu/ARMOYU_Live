@@ -6,48 +6,47 @@ class EventsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 400,
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxExtent = constraints.maxWidth < 900 ? 320.0 : 360.0;
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            mainAxisExtent: 230,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: 6,
+          itemBuilder: (context, index) {
+            return Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: CachedNetworkImageProvider(
+                    "https://cdn.bynogame.com/games/gta5-1662829149472.webp",
+                  ),
+                  fit: BoxFit.cover,
+                ),
               ),
-              itemCount: 6,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: CachedNetworkImageProvider(
-                          "https://cdn.bynogame.com/games/gta5-1662829149472.webp",
-                        ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      child: const Text(
+                        "Etkinliklere Bak",
                       ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            child: const Text(
-                              "Etkinliklere Bak",
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

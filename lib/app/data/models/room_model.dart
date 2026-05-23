@@ -53,7 +53,7 @@ class Room {
               .toList() // Mesajları JSON'dan oluştur
               .obs ??
           <Message>[].obs, // Null kontrolü ve varsayılan değer
-    )..currentMembers.value = (json['currentMembers'] as List<dynamic>)
+    )..currentMembers.value = ((json['currentMembers'] as List<dynamic>?) ?? [])
         .map((member) => Player.fromJson(member))
         .toList(); // Mevcut üyeleri JSON'dan oluştur
   }

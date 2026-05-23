@@ -29,7 +29,6 @@ class MainpageController extends GetxController {
     chatproccess.value = false;
 
     if (!response.result.status) {
-      fetchchats();
       return;
     }
 

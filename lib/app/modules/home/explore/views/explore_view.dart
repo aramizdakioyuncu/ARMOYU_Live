@@ -11,84 +11,90 @@ class ExploreView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ExploreController());
-    return Scaffold(
-      body: Row(
-        children: [
-          Container(
-            color: const Color.fromARGB(255, 29, 29, 29),
-            width: 250,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(18.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Keşfet",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sidebarWidth = constraints.maxWidth < 1100 ? 200.0 : 250.0;
+
+        return Scaffold(
+          body: Row(
+            children: [
+              Container(
+                color: const Color.fromARGB(255, 29, 29, 29),
+                width: sidebarWidth,
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(18.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Keşfet",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Obx(
-                  () => ListTile(
-                    selected: controller.currentPage.value == 0,
-                    onTap: () {
-                      controller.pageController.value.jumpToPage(0);
-                    },
-                    leading: const Padding(
-                      padding: EdgeInsets.only(left: 8.0),
-                      child: Icon(Icons.apps_rounded),
+                    Obx(
+                      () => ListTile(
+                        selected: controller.currentPage.value == 0,
+                        onTap: () {
+                          controller.pageController.value.jumpToPage(0);
+                        },
+                        leading: const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(Icons.apps_rounded),
+                        ),
+                        title: const Text("Uygulamalar"),
+                      ),
                     ),
-                    title: const Text("Uygulamalar"),
-                  ),
-                ),
-                Obx(
-                  () => ListTile(
-                    selected: controller.currentPage.value == 1,
-                    onTap: () {
-                      controller.pageController.value.jumpToPage(1);
-                    },
-                    leading: const Padding(
-                      padding: EdgeInsets.only(left: 8.0),
-                      child: Icon(Icons.groups_2_sharp),
+                    Obx(
+                      () => ListTile(
+                        selected: controller.currentPage.value == 1,
+                        onTap: () {
+                          controller.pageController.value.jumpToPage(1);
+                        },
+                        leading: const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(Icons.groups_2_sharp),
+                        ),
+                        title: const Text("Sunucular"),
+                      ),
                     ),
-                    title: const Text("Sunucular"),
-                  ),
-                ),
-                Obx(
-                  () => ListTile(
-                    selected: controller.currentPage.value == 2,
-                    onTap: () {
-                      controller.pageController.value.jumpToPage(2);
-                    },
-                    leading: const Padding(
-                      padding: EdgeInsets.only(left: 8.0),
-                      child: Icon(Icons.webhook_rounded),
+                    Obx(
+                      () => ListTile(
+                        selected: controller.currentPage.value == 2,
+                        onTap: () {
+                          controller.pageController.value.jumpToPage(2);
+                        },
+                        leading: const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(Icons.webhook_rounded),
+                        ),
+                        title: const Text("Sosyal"),
+                      ),
                     ),
-                    title: const Text("Sosyal"),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: controller.pageController.value,
+                  onPageChanged: (value) {
+                    controller.changePage(value);
+                  },
+                  children: const [
+                    ApplicationsView(),
+                    ServersView(),
+                    SocialView(),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: PageView(
-              controller: controller.pageController.value,
-              onPageChanged: (value) {
-                controller.changePage(value);
-              },
-              children: const [
-                ApplicationsView(),
-                ServersView(),
-                SocialView(),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

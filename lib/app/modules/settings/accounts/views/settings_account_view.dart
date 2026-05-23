@@ -9,116 +9,210 @@ class SettingsAccountView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: CircleAvatar(
-                          foregroundImage: CachedNetworkImageProvider(
-                            AppList.sessions.first.currentUser.user.avatar!
-                                .mediaURL.minURL.value,
-                          ),
-                          radius: 50,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "KULLANICI ADI",
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 760;
+
+        return Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: isCompact
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: CircleAvatar(
+                                        foregroundImage:
+                                            CachedNetworkImageProvider(
+                                          AppList
+                                              .sessions
+                                              .first
+                                              .currentUser
+                                              .user
+                                              .avatar!
+                                              .mediaURL
+                                              .minURL
+                                              .value,
+                                        ),
+                                        radius: 42,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            "KULLANICI ADI",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          Text(
+                                            "${AppList.sessions.first.currentUser.user.userName!.value} #${AppList.sessions.first.currentUser.user.userID}",
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            "E-POSTA",
+                                            style:
+                                                TextStyle(color: Colors.grey),
+                                          ),
+                                          Text(
+                                            AppList.sessions.first.currentUser
+                                                .user.detailInfo!.value!.email
+                                                .toString(),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {},
+                                      child: const Text("Düzenle"),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                      ),
+                                      onPressed: () async {
+                                        await ARMOYU.service.authServices
+                                            .logOut();
+                                        Get.offAndToNamed("/login");
+                                      },
+                                      child: const Text("Çıkış"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: CircleAvatar(
+                                    foregroundImage: CachedNetworkImageProvider(
+                                      AppList.sessions.first.currentUser.user
+                                          .avatar!.mediaURL.minURL.value,
+                                    ),
+                                    radius: 50,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          "KULLANICI ADI",
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        Text(
+                                          "${AppList.sessions.first.currentUser.user.userName!.value} #${AppList.sessions.first.currentUser.user.userID}",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 15),
+                                        const Text(
+                                          "E-POSTA",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                        Text(
+                                          AppList.sessions.first.currentUser
+                                              .user.detailInfo!.value!.email
+                                              .toString(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ElevatedButton(
+                                    onPressed: () {},
+                                    child: const Text("Düzenle"),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () async {
+                                      await ARMOYU.service.authServices
+                                          .logOut();
+                                      Get.offAndToNamed("/login");
+                                    },
+                                    child: const Text("Çıkış"),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              "${AppList.sessions.first.currentUser.user.userName!.value} #${AppList.sessions.first.currentUser.user.userID}",
-                            ),
-                            const SizedBox(height: 15),
-                            const Text(
-                              "E-POSTA",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            Text(
-                              AppList.sessions.first.currentUser.user
-                                  .detailInfo!.value!.email
-                                  .toString(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          child: const Text(
-                            "Düzenle",
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                          ),
-                          onPressed: () async {
-                            await ARMOYU.service.authServices.logOut();
-                            Get.offAndToNamed("/login");
-                          },
-                          child: const Text(
-                            "Çıkış",
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 60),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "İKİ AŞAMALI DOĞRULAMA",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "ARMOYU hesabını ekstra bir güvenlik sağlayın",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      child: const Text("İki Aşamalı Doğrulama Etkinleştir"),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 60),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "İKİ AŞAMALI DOĞRULAMA",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "ARMOYU hesabını ekstra bir güvenlik sağlayın",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  child: const Text("İki Aşamalı Doğrulama Etkinleştir"),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
