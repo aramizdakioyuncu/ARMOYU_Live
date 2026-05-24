@@ -48,7 +48,6 @@ class HomeController extends GetxController {
     remoteRenderer.value.initialize();
 
     windowManager.setResizable(true);
-    init();
     fetchgroup();
   }
 

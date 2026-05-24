@@ -12,6 +12,7 @@ import 'package:armoyu_desktop/app/modules/home/_main/controllers/home_controlle
 import 'package:armoyu_desktop/app/services/armoyu_services.dart';
 import 'package:armoyu_desktop/app/services/audio_model.dart';
 import 'package:armoyu_desktop/app/services/audioplayer_service.dart';
+import 'package:armoyu_desktop/app/services/cloudflare_realtime_voice_service.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
 import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room.dart';
 import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room_chat.dart';
@@ -51,6 +52,7 @@ class SocketioControllerV2 extends GetxController {
   var whichuserisCallingMe = "".obs;
 
   final player = AudioPlayer();
+  final voiceService = Get.put(CloudflareRealtimeVoiceService());
 //WEBRTC
   var isStreaming = false.obs;
   webrtc.RTCSessionDescription? tempoffer;
@@ -80,6 +82,7 @@ class SocketioControllerV2 extends GetxController {
   void onClose() {
     stopFetchingUserList();
     stopPing();
+    unawaited(voiceService.leave(sendEvent: false));
     player.dispose();
     speakingvoices.dispose();
     socket.disconnect();
@@ -175,6 +178,7 @@ class SocketioControllerV2 extends GetxController {
       'transports': ['websocket'],
       'autoConnect': true,
     });
+    voiceService.attachSocket(socket);
 
     startPing(const Duration(seconds: 2));
     // Ping değerini güncelle
@@ -231,6 +235,10 @@ class SocketioControllerV2 extends GetxController {
         );
 
         final homecontroller = Get.find<HomeController>();
+        if (homecontroller.peerConnection == null) {
+          log('${socketPREFIX}Offer alındı ama aktif peerConnection yok.');
+          return;
+        }
         // Peer connection'ı remote description olarak ayarlıyoruz
         homecontroller.peerConnection!.setRemoteDescription(offer).then((_) {
           // Remote description ayarlandıktan sonra cevabı oluştur
@@ -257,6 +265,10 @@ class SocketioControllerV2 extends GetxController {
       );
 
       final homecontroller = Get.find<HomeController>();
+      if (homecontroller.peerConnection == null) {
+        log('${socketPREFIX}Answer alındı ama aktif peerConnection yok.');
+        return;
+      }
       // Gelen "answer"ı remote description olarak ayarlıyoruz
       try {
         await homecontroller.peerConnection!.setRemoteDescription(answer);
@@ -280,6 +292,10 @@ class SocketioControllerV2 extends GetxController {
       );
       // Gelen candidate'ı peer connection'a ekliyoruz
       final homecontroller = Get.find<HomeController>();
+      if (homecontroller.peerConnection == null) {
+        log('${socketPREFIX}Candidate alındı ama aktif peerConnection yok.');
+        return;
+      }
 
       try {
         await homecontroller.peerConnection!.addCandidate(candidate);
@@ -345,6 +361,7 @@ class SocketioControllerV2 extends GetxController {
           log('${socketPREFIX}changeRoom (reconnect) ack: $data ${_stateLog()}');
         });
       }
+      unawaited(voiceService.rejoinAfterReconnect());
     });
 
     // Bağlantı kesildiğinde
@@ -488,7 +505,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── CHANNEL: kanala katılan kullanıcı ──────────────────────────────────
     socket.on('channel_user_joined', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         final bool micMuted = data['micMuted'] ?? false;
         final bool speakerOff = data['speakerOff'] ?? false;
         user.microphone.value = !micMuted;
@@ -538,7 +556,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── CHANNEL: kanaldan ayrılan kullanıcı ────────────────────────────────
     socket.on('channel_user_left', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         if (user.user.userID == null) return;
 
         _updateUserSpeaking(user.user.userID!, false);
@@ -547,8 +566,8 @@ class SocketioControllerV2 extends GetxController {
           final gm = _findMember(group.groupmembers, user.user.userID);
           gm?.currentRoom.value = null;
           for (final room in group.rooms ?? []) {
-            room.currentMembers.removeWhere(
-                (m) => m.user.userID == user.user.userID);
+            room.currentMembers
+                .removeWhere((m) => m.user.userID == user.user.userID);
           }
           group.groupmembers?.refresh();
           group.rooms?.refresh();
@@ -585,7 +604,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── MİC DURUMU değişti ──────────────────────────────────────────────────
     socket.on('user_mic_state', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         final bool micMuted = data['micMuted'] ?? false;
         if (user.user.userID == null) return;
         _updateUserMicState(user.user.userID!, !micMuted);
@@ -598,7 +618,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── HOPARLÖR DURUMU değişti ──────────────────────────────────────────────
     socket.on('user_speaker_state', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         final bool speakerOff = data['speakerOff'] ?? false;
         if (user.user.userID == null) return;
         _updateUserSpeakerState(user.user.userID!, !speakerOff);
@@ -611,7 +632,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── SES YAYINI başladı ───────────────────────────────────────────────────
     socket.on('audio_start', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         if (user.user.userID == null) return;
         _updateUserSpeaking(user.user.userID!, true);
       } catch (e) {
@@ -622,7 +644,8 @@ class SocketioControllerV2 extends GetxController {
     // ─── SES YAYINI durdu ─────────────────────────────────────────────────────
     socket.on('audio_stop', (data) {
       try {
-        final Player user = Player.fromJson(data['user'] as Map<String, dynamic>);
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
         if (user.user.userID == null) return;
         _updateUserSpeaking(user.user.userID!, false);
       } catch (e) {
@@ -1105,8 +1128,10 @@ class SocketioControllerV2 extends GetxController {
     socket.emitWithAck(event, null, ack: (data) {
       log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.microphone.value = newMicState;
+      voiceService.setMicrophoneEnabled(newMicState);
       if (newMicState && user.speaker.value == false) {
         user.speaker.value = true;
+        voiceService.setSpeakerEnabled(true);
       }
       userUpdate(user);
     });
@@ -1119,7 +1144,7 @@ class SocketioControllerV2 extends GetxController {
     socket.emitWithAck(event, null, ack: (data) {
       log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.speaker.value = newSpeakerState;
-      user.microphone.value = newSpeakerState;
+      voiceService.setSpeakerEnabled(newSpeakerState);
       userUpdate(user);
     });
   }
@@ -1130,6 +1155,9 @@ class SocketioControllerV2 extends GetxController {
     }
 
     exitroom();
+    if (room == null) {
+      unawaited(voiceService.leave());
+    }
 
     if (room != null) {
       roomchats(room);
@@ -1145,6 +1173,9 @@ class SocketioControllerV2 extends GetxController {
       log('${socketPREFIX}changeRoom -> ${room?.name.value ?? 'null'}');
       socket.emitWithAck('changeRoom', room?.toJson(), ack: (data) {
         log('${socketPREFIX}changeRoom ack: $data ${_stateLog()}');
+        if (room != null && data is Map && data['status'] == 'ok') {
+          unawaited(voiceService.join(room));
+        }
       });
     } catch (e) {
       log('${socketPREFIX}Hata(changeRoom) $e');
