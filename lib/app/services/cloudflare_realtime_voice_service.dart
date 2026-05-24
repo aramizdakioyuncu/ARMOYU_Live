@@ -484,6 +484,13 @@ class CloudflareRealtimeVoiceService extends GetxService {
     final payload = _asMap(data);
     final trackName = payload?['trackName']?.toString();
     final userId = _userIdFromTrackName(trackName);
+
+    // Track adını temizle; aksi hâlde aynı adla yeniden katılan kullanıcıya
+    // abone olunamaz (_subscribeToTrack erken dönüyor)
+    if (trackName != null) {
+      _subscribedTrackNames.remove(trackName);
+    }
+
     if (_kindFromTrack(payload) == 'video' && userId != null) {
       unawaited(_removeRemoteVideoRenderer(userId));
     }
