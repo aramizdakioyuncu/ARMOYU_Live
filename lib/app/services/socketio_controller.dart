@@ -630,6 +630,26 @@ class SocketioControllerV2 extends GetxController {
       }
     });
 
+    // ─── ODA SİLİNDİ (başkası sildi) ────────────────────────────────────────
+    socket.on('room_deleted', (data) {
+      try {
+        final roomData = data['room'] as Map<String, dynamic>;
+        final groupID = roomData['groupID'] as int;
+        final roomID = roomData['roomID'] as int;
+
+        final group =
+            groups.value?.firstWhereOrNull((g) => g.groupID == groupID);
+        if (group == null) return;
+
+        group.rooms?.removeWhere((r) => r.roomID == roomID);
+        group.rooms?.refresh();
+
+        log('$socketPREFIX[ROOM_DELETED] ${roomData['name']} (group $groupID)');
+      } catch (e) {
+        log('${socketPREFIX}Hata (room_deleted): $e');
+      }
+    });
+
     // ─── ODA OLUŞTURULDU (başkası oluşturdu) ────────────────────────────────
     socket.on('room_created', (data) {
       try {
@@ -1272,6 +1292,8 @@ class SocketioControllerV2 extends GetxController {
 
     currentgroup.rooms!
         .removeWhere((selectedroom) => room.roomID == selectedroom.roomID);
+
+    socket.emit('room_deleted', room.toJson());
   }
 
   bool isInRoom(Group userCurrentgroup) {
