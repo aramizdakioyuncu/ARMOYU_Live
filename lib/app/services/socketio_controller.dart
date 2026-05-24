@@ -1261,7 +1261,9 @@ class SocketioControllerV2 extends GetxController {
       if (newMicState && user.speaker.value == false) {
         user.speaker.value = true;
         voiceService.setSpeakerEnabled(true);
+        _updateUserSpeakerState(user.user.userID ?? -1, true);
       }
+      _updateUserMicState(user.user.userID ?? -1, newMicState);
       userUpdate(user);
       log('$socketPREFIX$event ack: $data ${_stateLog()}');
     });
@@ -1274,6 +1276,12 @@ class SocketioControllerV2 extends GetxController {
     socket.emitWithAck(event, null, ack: (data) {
       user.speaker.value = newSpeakerState;
       voiceService.setSpeakerEnabled(newSpeakerState);
+      if (!newSpeakerState && user.microphone.value == true) {
+        user.microphone.value = false;
+        voiceService.setMicrophoneEnabled(false);
+        _updateUserMicState(user.user.userID ?? -1, false);
+      }
+      _updateUserSpeakerState(user.user.userID ?? -1, newSpeakerState);
       userUpdate(user);
       log('$socketPREFIX$event ack: $data ${_stateLog()}');
     });
