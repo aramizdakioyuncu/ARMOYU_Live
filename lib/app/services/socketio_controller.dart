@@ -1312,6 +1312,9 @@ class SocketioControllerV2 extends GetxController {
     }
 
     if (room != null) {
+      if (room.type == RoomType.sound) {
+        unawaited(voiceService.preWarm());
+      }
       roomchats(room);
       room.currentMembers.add(AppList.sessions.first.currentUser);
       player.play(AssetSource("sounds/join_room.wav"));

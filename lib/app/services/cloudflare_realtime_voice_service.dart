@@ -13,10 +13,10 @@ class CloudflareRealtimeVoiceService extends GetxService {
   static const _iceServers = [
     {'urls': 'stun:stun.cloudflare.com:3478'},
   ];
-  static const _localAudioPollInterval = Duration(milliseconds: 250);
+  static const _localAudioPollInterval = Duration(milliseconds: 100);
   static const _audioLevelThreshold = 0.02;
   static const _audioEnergyThreshold = 0.00015;
-  static const _quietSamplesBeforeStop = 3;
+  static const _quietSamplesBeforeStop = 2;
   static const _socketAckTimeout = Duration(seconds: 10);
 
   io.Socket? _socket;
@@ -79,6 +79,17 @@ class CloudflareRealtimeVoiceService extends GetxService {
     socket.on('voice:publish-answer', _handlePublishAnswer);
     socket.on('voice:track-added', _handleTrackAdded);
     socket.on('voice:track-removed', _handleTrackRemoved);
+  }
+
+  Future<void> preWarm() async {
+    if (_peerConnection != null || _socket == null || AppList.sessions.isEmpty) {
+      return;
+    }
+    try {
+      await _ensurePeerConnection();
+    } catch (e) {
+      log('${_prefix}preWarm hatası: $e');
+    }
   }
 
   Future<void> join(Room room, {bool restoreCamera = false}) async {
@@ -427,10 +438,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
     });
 
     final existingTracks = payload['existingTracks'];
-    if (existingTracks is List) {
-      for (final track in existingTracks) {
-        _subscribeToTrack(track);
-      }
+    if (existingTracks is List && existingTracks.isNotEmpty) {
+      _subscribeToTracksBatch(existingTracks);
     }
   }
 
@@ -508,6 +517,79 @@ class CloudflareRealtimeVoiceService extends GetxService {
         _subscribedTrackNames.add(trackName);
       } finally {
         _subscribingTrackNames.remove(trackName);
+      }
+    });
+  }
+
+  void _subscribeToTracksBatch(List<dynamic> rawTracks) {
+    if (_socket == null || _sessionId == null) return;
+
+    final validTracks = rawTracks
+        .map(_asMap)
+        .where((t) {
+          if (t == null) return false;
+          final remoteSessionId =
+              t['sessionId']?.toString() ?? t['remoteSessionId']?.toString();
+          final trackName = t['trackName']?.toString();
+          return remoteSessionId != null &&
+              remoteSessionId != _sessionId &&
+              trackName != null &&
+              trackName != _localAudioTrackName &&
+              trackName != _localVideoTrackName &&
+              !_subscribingTrackNames.contains(trackName) &&
+              !_subscribedTrackNames.contains(trackName);
+        })
+        .cast<Map<String, dynamic>>()
+        .toList();
+
+    if (validTracks.isEmpty) return;
+
+    for (final t in validTracks) {
+      _subscribingTrackNames.add(t['trackName'].toString());
+    }
+
+    _queueNegotiation(() async {
+      try {
+        final batchPayload = validTracks
+            .map((t) => {
+                  'trackName': t['trackName'],
+                  'remoteSessionId':
+                      t['sessionId']?.toString() ?? t['remoteSessionId']?.toString(),
+                  'kind': _kindFromTrack(t),
+                })
+            .toList();
+
+        final result = await _emitWithAckMap('voice:subscribe-batch', {
+          'sessionId': _sessionId,
+          'tracks': batchPayload,
+        });
+
+        if (result == null || result['sessionDescription'] == null) return;
+
+        final responseTracks = result['tracks'] as List? ?? [];
+        for (final t in validTracks) {
+          _registerRemoteVideoMapping({
+            ...t,
+            'tracks': responseTracks,
+          });
+        }
+
+        await _setRemoteDescription(_asMap(result['sessionDescription'])!);
+        final answer = await _peerConnection!.createAnswer();
+        await _peerConnection!.setLocalDescription(answer);
+        _socket!.emit('voice:subscribe-answer', {
+          'sessionId': _sessionId,
+          'sessionDescription': answer.toMap(),
+        });
+
+        for (final t in validTracks) {
+          _subscribedTrackNames.add(t['trackName'].toString());
+        }
+        log('${_prefix}Batch subscribe tamamlandı: ${validTracks.length} track');
+      } finally {
+        for (final t in validTracks) {
+          _subscribingTrackNames.remove(t['trackName'].toString());
+        }
       }
     });
   }
