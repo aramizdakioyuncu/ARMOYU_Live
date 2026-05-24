@@ -13,6 +13,7 @@ import 'package:armoyu_desktop/app/services/armoyu_services.dart';
 import 'package:armoyu_desktop/app/services/audio_model.dart';
 import 'package:armoyu_desktop/app/services/audioplayer_service.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
+import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room.dart';
 import 'package:armoyu_services/core/models/ARMOYU/API/group/group_room_chat.dart';
 import 'package:armoyu_services/core/models/ARMOYU/_response/response.dart';
 import 'package:armoyu_services/core/models/ARMOYU/_response/service_result.dart';
@@ -629,6 +630,34 @@ class SocketioControllerV2 extends GetxController {
       }
     });
 
+    // ─── ODA OLUŞTURULDU (başkası oluşturdu) ────────────────────────────────
+    socket.on('room_created', (data) {
+      try {
+        final roomData = data['room'] as Map<String, dynamic>;
+        final groupID = roomData['groupID'] as int;
+
+        final group =
+            groups.value?.firstWhereOrNull((g) => g.groupID == groupID);
+        if (group == null) return;
+
+        final roomID = roomData['roomID'] as int;
+        if (group.rooms?.any((r) => r.roomID == roomID) == true) return;
+
+        group.rooms?.add(Room(
+          groupID: groupID,
+          roomID: roomID,
+          name: roomData['name'] as String,
+          limit: roomData['limit'] as int?,
+          type: RoomType.values[roomData['type'] as int],
+        ));
+        group.rooms?.refresh();
+
+        log('$socketPREFIX[ROOM_CREATED] ${roomData['name']} (group $groupID)');
+      } catch (e) {
+        log('${socketPREFIX}Hata (room_created): $e');
+      }
+    });
+
     socket.on('USER_LIST', (data) {
       try {
         var json = jsonDecode(data);
@@ -1211,15 +1240,16 @@ class SocketioControllerV2 extends GetxController {
       return;
     }
 
-    currentgroup.rooms!.add(
-      Room(
-        groupID: currentgroup.groupID,
-        roomID: response.response!.roomID,
-        name: response.response!.name,
-        limit: response.response!.limit,
-        type: response.response!.type,
-      ),
+    final newRoom = Room(
+      groupID: currentgroup.groupID,
+      roomID: response.response!.roomID,
+      name: response.response!.name,
+      limit: response.response!.limit,
+      type: response.response!.type,
     );
+    currentgroup.rooms!.add(newRoom);
+
+    socket.emit('room_created', newRoom.toJson());
   }
 
   Future<void> deleteRoom(Room room, Group userCurrentgroup) async {
