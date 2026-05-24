@@ -101,7 +101,16 @@ class CloudflareRealtimeVoiceService extends GetxService {
       return;
     }
 
-    await leave(sendEvent: _currentRoom != null);
+    if (_currentRoom != null || isJoined.value) {
+      // Oda değişikliği: mic stream'i canlı tut, sadece PC ve session'ı kapat
+      await leave(sendEvent: true, stopLocalMedia: false);
+    } else {
+      // İlk katılım veya pre-warm: PC ve stream'i koru, sadece session durumunu sıfırla
+      _sessionId = null;
+      _localAudioTrackName = null;
+      _localVideoTrackName = null;
+      isConnecting.value = false;
+    }
     _currentRoom = room;
     _restoreCameraAfterJoin = restoreCamera;
     isConnecting.value = true;
@@ -146,12 +155,12 @@ class CloudflareRealtimeVoiceService extends GetxService {
     await join(room, restoreCamera: shouldRestoreCamera);
   }
 
-  Future<void> leave({bool sendEvent = true}) async {
+  Future<void> leave({bool sendEvent = true, bool stopLocalMedia = true}) async {
     if (sendEvent) {
       _socket?.emit('voice:leave');
     }
 
-    await _closePeerConnection(stopLocal: true);
+    await _closePeerConnection(stopLocal: stopLocalMedia);
     _sessionId = null;
     _localAudioTrackName = null;
     _localVideoTrackName = null;
@@ -207,7 +216,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
       return;
     }
 
-    _localStream = await webrtc.navigator.mediaDevices.getUserMedia({
+    // Oda değişikliğinde mevcut mic stream'i yeniden kullan; getUserMedia gecikmesini atla
+    _localStream ??= await webrtc.navigator.mediaDevices.getUserMedia({
       'audio': true,
       'video': false,
     });
@@ -791,8 +801,11 @@ class CloudflareRealtimeVoiceService extends GetxService {
   }
 
   Future<void> _closePeerConnection({required bool stopLocal}) async {
+    // Speaking monitor ve sender her zaman sıfırlanır; yeni PC ile yeniden başlatılır
+    _stopLocalSpeakingMonitor();
+    _localAudioSender = null;
+
     if (stopLocal) {
-      _stopLocalSpeakingMonitor();
       _setLocalSpeaking(false, notifyServer: true);
       await _stopLocalCamera(sendCloseEvent: false);
       for (final track in _localStream?.getTracks() ?? []) {
@@ -800,7 +813,6 @@ class CloudflareRealtimeVoiceService extends GetxService {
       }
       await _localStream?.dispose();
       _localStream = null;
-      _localAudioSender = null;
     }
 
     await _peerConnection?.close();
