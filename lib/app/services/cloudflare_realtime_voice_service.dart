@@ -13,6 +13,10 @@ class CloudflareRealtimeVoiceService extends GetxService {
   static const _iceServers = [
     {'urls': 'stun:stun.cloudflare.com:3478'},
   ];
+  static const _localAudioPollInterval = Duration(milliseconds: 250);
+  static const _audioLevelThreshold = 0.02;
+  static const _audioEnergyThreshold = 0.00015;
+  static const _quietSamplesBeforeStop = 3;
 
   io.Socket? _socket;
   webrtc.RTCPeerConnection? _peerConnection;
@@ -24,6 +28,12 @@ class CloudflareRealtimeVoiceService extends GetxService {
   String? _sessionId;
   String? _localAudioTrackName;
   String? _localVideoTrackName;
+  bool _restoreCameraAfterJoin = false;
+  bool _localSpeaking = false;
+  int _quietAudioSamples = 0;
+  double? _lastAudioEnergy;
+  double? _lastAudioDuration;
+  Timer? _localSpeakingTimer;
   Future<void> _negotiationQueue = Future.value();
 
   final _remoteVideoUserByMid = <String, int>{};
@@ -69,7 +79,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
     socket.on('voice:track-removed', _handleTrackRemoved);
   }
 
-  Future<void> join(Room room) async {
+  Future<void> join(Room room, {bool restoreCamera = false}) async {
     if (_socket == null || AppList.sessions.isEmpty) {
       return;
     }
@@ -80,6 +90,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
 
     await leave(sendEvent: _currentRoom != null);
     _currentRoom = room;
+    _restoreCameraAfterJoin = restoreCamera;
     isConnecting.value = true;
 
     try {
@@ -119,10 +130,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
     _localAudioTrackName = null;
     _localVideoTrackName = null;
     isJoined.value = false;
-    await join(room);
-    if (shouldRestoreCamera) {
-      await setCameraEnabled(true);
-    }
+    await join(room, restoreCamera: shouldRestoreCamera);
   }
 
   Future<void> leave({bool sendEvent = true}) async {
@@ -138,11 +146,17 @@ class CloudflareRealtimeVoiceService extends GetxService {
     isConnecting.value = false;
     isJoined.value = false;
     cameraEnabled.value = false;
+    _restoreCameraAfterJoin = false;
   }
 
   void setMicrophoneEnabled(bool enabled) {
     for (final track in _localStream?.getAudioTracks() ?? []) {
       track.enabled = enabled;
+    }
+    if (enabled) {
+      _startLocalSpeakingMonitor();
+    } else {
+      _setLocalSpeaking(false, notifyServer: true);
     }
   }
 
@@ -185,9 +199,12 @@ class CloudflareRealtimeVoiceService extends GetxService {
       'iceServers': _iceServers,
     });
 
+    final currentUser = AppList.sessions.first.currentUser;
     for (final track in _localStream!.getAudioTracks()) {
+      track.enabled = currentUser.microphone.value;
       _localAudioSender = await _peerConnection!.addTrack(track, _localStream!);
     }
+    _startLocalSpeakingMonitor();
 
     _peerConnection!.onTrack = (event) {
       if (event.streams.isEmpty) {
@@ -390,6 +407,12 @@ class CloudflareRealtimeVoiceService extends GetxService {
         await _setRemoteDescription(sessionDescription);
       }
       await _publishLocalAudioTrack();
+      setMicrophoneEnabled(AppList.sessions.first.currentUser.microphone.value);
+      setSpeakerEnabled(AppList.sessions.first.currentUser.speaker.value);
+      if (_restoreCameraAfterJoin) {
+        _restoreCameraAfterJoin = false;
+        await setCameraEnabled(true);
+      }
     });
 
     final existingTracks = payload['existingTracks'];
@@ -638,6 +661,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
 
   Future<void> _closePeerConnection({required bool stopLocal}) async {
     if (stopLocal) {
+      _stopLocalSpeakingMonitor();
+      _setLocalSpeaking(false, notifyServer: true);
       await _stopLocalCamera(sendCloseEvent: false);
       for (final track in _localStream?.getTracks() ?? []) {
         await track.stop();
@@ -660,6 +685,115 @@ class CloudflareRealtimeVoiceService extends GetxService {
       await renderer.dispose();
     }
     remoteVideoRenderersByUser.clear();
+  }
+
+  void _startLocalSpeakingMonitor() {
+    if (_localSpeakingTimer != null || _localAudioSender == null) {
+      return;
+    }
+
+    _localSpeakingTimer = Timer.periodic(
+      _localAudioPollInterval,
+      (_) => unawaited(_sampleLocalAudioLevel()),
+    );
+  }
+
+  void _stopLocalSpeakingMonitor() {
+    _localSpeakingTimer?.cancel();
+    _localSpeakingTimer = null;
+    _quietAudioSamples = 0;
+    _lastAudioEnergy = null;
+    _lastAudioDuration = null;
+  }
+
+  Future<void> _sampleLocalAudioLevel() async {
+    if (_localAudioSender == null ||
+        AppList.sessions.isEmpty ||
+        !AppList.sessions.first.currentUser.microphone.value) {
+      _setLocalSpeaking(false, notifyServer: true);
+      return;
+    }
+
+    try {
+      final stats = await _localAudioSender!.getStats();
+      bool speaking = false;
+
+      for (final report in stats) {
+        final values = report.values;
+        final audioLevel =
+            _numberValue(values['audioLevel'] ?? values['audioInputLevel']);
+        if (audioLevel != null) {
+          final normalizedLevel =
+              audioLevel > 1 ? audioLevel / 32768 : audioLevel;
+          if (normalizedLevel >= _audioLevelThreshold) {
+            speaking = true;
+            break;
+          }
+        }
+
+        final totalEnergy = _numberValue(values['totalAudioEnergy']);
+        final totalDuration = _numberValue(values['totalSamplesDuration']);
+        if (totalEnergy != null && totalDuration != null) {
+          final previousEnergy = _lastAudioEnergy;
+          final previousDuration = _lastAudioDuration;
+          _lastAudioEnergy = totalEnergy;
+          _lastAudioDuration = totalDuration;
+
+          if (previousEnergy != null && previousDuration != null) {
+            final energyDelta = totalEnergy - previousEnergy;
+            final durationDelta = totalDuration - previousDuration;
+            if (durationDelta > 0 &&
+                energyDelta / durationDelta >= _audioEnergyThreshold) {
+              speaking = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (speaking) {
+        _quietAudioSamples = 0;
+        _setLocalSpeaking(true, notifyServer: true);
+        return;
+      }
+
+      _quietAudioSamples += 1;
+      if (_quietAudioSamples >= _quietSamplesBeforeStop) {
+        _setLocalSpeaking(false, notifyServer: true);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log('${_prefix}Mikrofon seviyesi okunamadi: $e');
+      }
+    }
+  }
+
+  void _setLocalSpeaking(bool speaking, {required bool notifyServer}) {
+    if (AppList.sessions.isEmpty) {
+      return;
+    }
+
+    if (_localSpeaking == speaking &&
+        AppList.sessions.first.currentUser.isSpeaking.value == speaking) {
+      return;
+    }
+
+    _localSpeaking = speaking;
+    AppList.sessions.first.currentUser.isSpeaking.value = speaking;
+
+    if (notifyServer && _socket != null && _currentRoom != null) {
+      _socket!.emit(speaking ? 'AUDIO_START' : 'AUDIO_STOP');
+    }
+  }
+
+  double? _numberValue(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
   }
 
   Map<String, dynamic>? _asMap(dynamic value) {

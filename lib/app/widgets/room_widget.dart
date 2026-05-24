@@ -216,18 +216,31 @@ class _RoomMemberTileState extends State<_RoomMemberTile> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: tokens.surfaceMuted,
-                          border: widget.socketio.isSoundStreaming.value
-                              ? Border.all(
-                                  color: Colors.amber.withValues(alpha: 0.8),
-                                  width: 1.5)
-                              : null,
                         ),
-                        child: ClipOval(
-                          child: CachedNetworkImage(
-                            imageUrl: widget
-                                .member.user.avatar!.mediaURL.minURL.value,
-                            fit: BoxFit.cover,
-                          ),
+                        child: Stack(
+                          children: [
+                            ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: widget
+                                    .member.user.avatar!.mediaURL.minURL.value,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned.fill(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 120),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: widget.member.isSpeaking.value
+                                        ? const Color(0xFF22C55E)
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       )),
                 ],

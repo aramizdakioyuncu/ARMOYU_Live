@@ -1271,7 +1271,12 @@ class SocketioControllerV2 extends GetxController {
       socket.emitWithAck('changeRoom', room?.toJson(), ack: (data) {
         log('${socketPREFIX}changeRoom ack: $data ${_stateLog()}');
         if (room != null && data is Map && data['status'] == 'ok') {
-          unawaited(voiceService.join(room));
+          unawaited(
+            voiceService.join(
+              room,
+              restoreCamera: AppList.sessions.first.currentUser.camera.value,
+            ),
+          );
         }
       });
     } catch (e) {

@@ -124,6 +124,8 @@ class LoginController extends GetxController {
       Session(
         currentUser: Player(
           user: User.apilogintoUser(response.response!),
+          microphone: true,
+          speaker: true,
         ),
       ),
     );
