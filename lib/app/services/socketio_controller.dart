@@ -378,13 +378,38 @@ class SocketioControllerV2 extends GetxController {
     // Grubua girildiğinde/çıkıldığında ve odaya girildiğinde/çıkıldığında client bu verilerle güncellenecek
     socket.on('user_entry_activity', (data) {
       try {
-        final Player user = Player.fromJson(data['user']);
-        final Room room = Room.fromJson(data['room']);
+        final rawUser = data['user'];
+        if (rawUser is! Map) {
+          return;
+        }
 
-        final int groupId = room.groupID;
+        final Player user = Player.fromJson(
+          rawUser.map((key, value) => MapEntry(key.toString(), value)),
+        );
+        if (user.user.userID == null) {
+          return;
+        }
+
         final UserEntryActivityType type =
             UserEntryActivityType.values.byName(data["type"]);
 
+        final rawRoom = data['room'];
+        Room? room;
+        if (rawRoom is Map) {
+          room = Room.fromJson(
+            rawRoom.map((key, value) => MapEntry(key.toString(), value)),
+          );
+        }
+
+        if (room == null) {
+          if (type == UserEntryActivityType.leave) {
+            _removeUserFromAllRooms(user.user.userID!);
+          }
+          return;
+        }
+
+        final eventRoom = room;
+        final int groupId = eventRoom.groupID;
         final List<Group> myGroups = AppList.groups;
         if (!myGroups.any((g) => g.groupID == groupId)) {
           return; // Grup bulunamadı
@@ -394,15 +419,15 @@ class SocketioControllerV2 extends GetxController {
             groups.value!.firstWhere((g) => g.groupID == groupId);
 
         Room? destRoom =
-            group.rooms?.firstWhereOrNull((r) => r.roomID == room.roomID);
+            group.rooms?.firstWhereOrNull((r) => r.roomID == eventRoom.roomID);
 
         final int? currentUserId =
             AppList.sessions.first.currentUser.user.userID;
 
         if (type == UserEntryActivityType.join) {
           if (destRoom == null) {
-            group.rooms?.add(room);
-            destRoom = room;
+            group.rooms?.add(eventRoom);
+            destRoom = eventRoom;
           }
 
           // Üye listede yoksa ekle
@@ -423,8 +448,8 @@ class SocketioControllerV2 extends GetxController {
           destRoom.currentMembers.add(user);
         } else if (type == UserEntryActivityType.leave) {
           if (destRoom == null) {
-            group.rooms?.add(room);
-            destRoom = room;
+            group.rooms?.add(eventRoom);
+            destRoom = eventRoom;
           }
 
           Groupmember? groupMember = group.groupmembers!.firstWhereOrNull(
@@ -433,7 +458,7 @@ class SocketioControllerV2 extends GetxController {
           destRoom.removeUserFromRooms(user);
         }
 
-        room.currentMembers.refresh();
+        destRoom?.currentMembers.refresh();
         group.groupmembers?.refresh();
         group.rooms?.refresh();
         groups.refresh();
@@ -972,6 +997,28 @@ class SocketioControllerV2 extends GetxController {
         }
       }
     }
+  }
+
+  void _removeUserFromAllRooms(int userID) {
+    if (groups.value == null) return;
+
+    for (final group in groups.value!) {
+      for (final member in group.groupmembers ?? <Groupmember>[]) {
+        if (member.user.value.user.userID == userID) {
+          member.currentRoom.value = null;
+          member.user.value.isSpeaking.value = false;
+        }
+      }
+
+      for (final room in group.rooms ?? <Room>[]) {
+        room.currentMembers
+            .removeWhere((player) => player.user.userID == userID);
+      }
+
+      group.groupmembers?.refresh();
+      group.rooms?.refresh();
+    }
+    groups.refresh();
   }
 
   // Socket.io ile mesaj gönderme
