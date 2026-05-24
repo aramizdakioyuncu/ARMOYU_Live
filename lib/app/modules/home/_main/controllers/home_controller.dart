@@ -37,6 +37,9 @@ class HomeController extends GetxController {
 
   var showMembers = false.obs;
 
+  // Hangi grupların oda listesi API'den çekildi
+  final Set<int> groupRoomsLoadedIds = {};
+
   @override
   void onInit() {
     super.onInit();
@@ -77,6 +80,7 @@ class HomeController extends GetxController {
     }
 
     AppList.groups.value = [];
+    groupRoomsLoadedIds.clear();
 
     for (APIMyGroupList element in response.response!) {
       AppList.groups.add(
