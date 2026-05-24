@@ -1,4 +1,5 @@
 import 'package:armoyu_desktop/app/data/models/group_model.dart';
+import 'package:armoyu_desktop/app/data/models/player_model.dart';
 import 'package:armoyu_desktop/app/modules/home/_main/controllers/home_controller.dart';
 import 'package:armoyu_desktop/app/services/socketio_controller.dart';
 import 'package:armoyu_desktop/app/utils/applist.dart';
@@ -143,7 +144,6 @@ class _GroupPageState extends State<_GroupPage> {
                           children: [
                             // Video bölümü
                             _VideoSection(
-                              homeController: homeController,
                               socketio: socketio,
                               group: group,
                             ),
@@ -537,14 +537,10 @@ class _HeaderBtnState extends State<_HeaderBtn> {
 }
 
 class _VideoSection extends StatelessWidget {
-  final HomeController homeController;
   final SocketioControllerV2 socketio;
   final Group group;
 
-  const _VideoSection(
-      {required this.homeController,
-      required this.socketio,
-      required this.group});
+  const _VideoSection({required this.socketio, required this.group});
 
   @override
   Widget build(BuildContext context) {
@@ -560,90 +556,30 @@ class _VideoSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                Obx(() => Container(
-                      height: 180,
-                      width: 280,
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: borderColor),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: homeController.connectionState.value ==
-                              webrtc.RTCPeerConnectionState
-                                  .RTCPeerConnectionStateConnected
-                          ? webrtc.RTCVideoView(
-                              homeController.localRenderer.value)
-                          : Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: textColor.withValues(alpha: 0.08),
-                                    ),
-                                    child: ClipOval(
-                                      child: CachedNetworkImage(
-                                        imageUrl: AppList
-                                            .sessions
-                                            .first
-                                            .currentUser
-                                            .user
-                                            .avatar!
-                                            .mediaURL
-                                            .minURL
-                                            .value,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Obx(() => Text(
-                                        AppList.sessions.first.currentUser.user
-                                                .userName?.value ??
-                                            "",
-                                        style: TextStyle(
-                                          color:
-                                              textColor.withValues(alpha: 0.58),
-                                          fontSize: 11,
-                                        ),
-                                      )),
-                                ],
-                              ),
-                            ),
-                    )),
-                const SizedBox(height: 4),
-                Expanded(
-                  child: Obx(() => SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: List.generate(
-                            homeController.remoteRenderers.length,
-                            (index) => Container(
-                              width: 120,
-                              height: 80,
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                color: surfaceColor,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: borderColor),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: webrtc.RTCVideoView(
-                                homeController.remoteRenderers[index],
-                              ),
-                            ),
-                          ),
-                        ),
-                      )),
+            child: Obx(() {
+              final room = socketio.findmyRoom(group);
+              final members = room?.currentMembers ?? <Player>[].obs;
+              if (members.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(
+                    members.length,
+                    (index) => _ParticipantMediaTile(
+                      member: members[index],
+                      socketio: socketio,
+                      width: members.length == 1 ? 280 : 220,
+                      surfaceColor: surfaceColor,
+                      textColor: textColor,
+                      borderColor: borderColor,
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              );
+            }),
           ),
           // Kontrol butonları
           Positioned(
@@ -662,11 +598,6 @@ class _VideoSection extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _VoiceBtn(
-                      icon: Icons.screen_share_outlined,
-                      onTap: () {},
-                    ),
-                    const SizedBox(width: 6),
                     Obx(() => _VoiceBtn(
                           icon: AppList.sessions.first.currentUser.microphone
                                       .value ==
@@ -682,6 +613,36 @@ class _VideoSection extends StatelessWidget {
                               .micOnOff(AppList.sessions.first.currentUser),
                         )),
                     const SizedBox(width: 6),
+                    Obx(() => _VoiceBtn(
+                          icon: AppList.sessions.first.currentUser.speaker
+                                      .value ==
+                                  true
+                              ? Icons.headphones_outlined
+                              : Icons.headset_off_outlined,
+                          active:
+                              AppList.sessions.first.currentUser.speaker.value,
+                          isDestructive: AppList
+                                  .sessions.first.currentUser.speaker.value !=
+                              true,
+                          onTap: () => socketio
+                              .speakerOnOff(AppList.sessions.first.currentUser),
+                        )),
+                    const SizedBox(width: 6),
+                    Obx(() => _VoiceBtn(
+                          icon:
+                              AppList.sessions.first.currentUser.camera.value ==
+                                      true
+                                  ? Icons.videocam_outlined
+                                  : Icons.videocam_off_outlined,
+                          active:
+                              AppList.sessions.first.currentUser.camera.value,
+                          isDestructive:
+                              AppList.sessions.first.currentUser.camera.value !=
+                                  true,
+                          onTap: () => socketio
+                              .cameraOnOff(AppList.sessions.first.currentUser),
+                        )),
+                    const SizedBox(width: 6),
                     _VoiceBtn(
                       icon: Icons.call_end_rounded,
                       isDestructive: true,
@@ -694,6 +655,148 @@ class _VideoSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ParticipantMediaTile extends StatelessWidget {
+  final Player member;
+  final SocketioControllerV2 socketio;
+  final double width;
+  final Color surfaceColor;
+  final Color textColor;
+  final Color borderColor;
+
+  const _ParticipantMediaTile({
+    required this.member,
+    required this.socketio,
+    required this.width,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final voiceService = socketio.voiceService;
+    final currentUserId = AppList.sessions.first.currentUser.user.userID;
+    final memberUserId = member.user.userID;
+    final isSelf = memberUserId == currentUserId;
+
+    return Obx(() {
+      final renderer = isSelf
+          ? (voiceService.cameraEnabled.value &&
+                  voiceService.localVideoReady.value
+              ? voiceService.localVideoRenderer
+              : null)
+          : voiceService.remoteVideoRenderersByUser[memberUserId];
+      final hasVideo = renderer != null;
+
+      return Container(
+        height: 180,
+        width: width,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: hasVideo
+                  ? webrtc.RTCVideoView(
+                      renderer,
+                      mirror: isSelf,
+                      objectFit: webrtc
+                          .RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                    )
+                  : _ParticipantAvatar(member: member, textColor: textColor),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 8,
+              child: Text(
+                member.user.displayName?.value ??
+                    member.user.userName?.value ??
+                    "",
+                style: TextStyle(
+                  color: hasVideo ? Colors.white : textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  shadows: hasVideo
+                      ? const [Shadow(color: Colors.black, blurRadius: 8)]
+                      : null,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (member.microphone.value != true)
+                    _MediaBadge(icon: Icons.mic_off_outlined),
+                  if (member.speaker.value != true)
+                    _MediaBadge(icon: Icons.headset_off_outlined),
+                  if (hasVideo) _MediaBadge(icon: Icons.videocam_outlined),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _ParticipantAvatar extends StatelessWidget {
+  final Player member;
+  final Color textColor;
+
+  const _ParticipantAvatar({required this.member, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: textColor.withValues(alpha: 0.08),
+        ),
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: member.user.avatar!.mediaURL.minURL.value,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MediaBadge extends StatelessWidget {
+  final IconData icon;
+
+  const _MediaBadge({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24,
+      height: 24,
+      margin: const EdgeInsets.only(left: 4),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withValues(alpha: 0.55),
+      ),
+      child: Icon(icon, size: 13, color: Colors.white),
     );
   }
 }

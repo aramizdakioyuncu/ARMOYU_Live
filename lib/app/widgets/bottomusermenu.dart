@@ -86,8 +86,7 @@ class Bottomusermenu {
                         ),
                       ),
                       Obx(() {
-                        final status =
-                            socketio.internetConnectionStatus.value;
+                        final status = socketio.internetConnectionStatus.value;
                         final ping = socketio.pingValue.value;
                         return Tooltip(
                           message: '$ping ms',
@@ -187,6 +186,13 @@ class Bottomusermenu {
                                 : Icons.headset_off_outlined,
                             color: user.speaker.value ? mutedColor : Colors.red,
                             onTap: () => socketio.speakerOnOff(user),
+                          )),
+                      Obx(() => _SmallIconBtn(
+                            icon: user.camera.value
+                                ? Icons.videocam_outlined
+                                : Icons.videocam_off_outlined,
+                            color: user.camera.value ? mutedColor : Colors.red,
+                            onTap: () => socketio.cameraOnOff(user),
                           )),
                       _SmallIconBtn(
                         icon: Icons.settings_outlined,

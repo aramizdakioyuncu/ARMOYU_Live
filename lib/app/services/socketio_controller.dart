@@ -509,8 +509,10 @@ class SocketioControllerV2 extends GetxController {
             Player.fromJson(data['user'] as Map<String, dynamic>);
         final bool micMuted = data['micMuted'] ?? false;
         final bool speakerOff = data['speakerOff'] ?? false;
+        final bool cameraOn = data['cameraOn'] ?? user.camera.value;
         user.microphone.value = !micMuted;
         user.speaker.value = !speakerOff;
+        user.camera.value = cameraOn;
 
         if (user.user.userID == null) return;
 
@@ -523,6 +525,7 @@ class SocketioControllerV2 extends GetxController {
           } else {
             gm.user.value.microphone.value = user.microphone.value;
             gm.user.value.speaker.value = user.speaker.value;
+            gm.user.value.camera.value = user.camera.value;
           }
 
           // Kullanıcıyı odanın currentMembers listesine ekle
@@ -583,6 +586,7 @@ class SocketioControllerV2 extends GetxController {
     socket.on('channel_user_list', (data) {
       try {
         final List<dynamic> members = data as List<dynamic>;
+        final currentRoom = findmyRoomanyWhereGroup();
         for (final memberData in members) {
           if (memberData['clientId'] == null) continue;
           final Player user =
@@ -590,10 +594,56 @@ class SocketioControllerV2 extends GetxController {
           if (user.user.userID == null) continue;
           final bool micMuted = memberData['micMuted'] ?? false;
           final bool speakerOff = memberData['speakerOff'] ?? false;
+          final bool cameraOn = memberData['cameraOn'] ?? user.camera.value;
           final bool isStreaming = memberData['isStreaming'] ?? false;
+          user.microphone.value = !micMuted;
+          user.speaker.value = !speakerOff;
+          user.camera.value = cameraOn;
           _updateUserMicState(user.user.userID!, !micMuted);
           _updateUserSpeakerState(user.user.userID!, !speakerOff);
+          _updateUserCameraState(user.user.userID!, cameraOn);
           _updateUserSpeaking(user.user.userID!, isStreaming);
+
+          Room? userRoom;
+          final rawRoom = memberData['room'];
+          if (rawRoom is Map) {
+            userRoom = Room.fromJson(
+              rawRoom.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          userRoom ??= currentRoom;
+          if (userRoom == null) continue;
+
+          final group = groups.value?.firstWhereOrNull(
+            (item) => item.groupID == userRoom!.groupID,
+          );
+          if (group == null) continue;
+
+          Groupmember? gm = _findMember(group.groupmembers, user.user.userID);
+          if (gm == null) {
+            gm = Groupmember(user: user.obs, description: '-', status: 0);
+            group.groupmembers?.add(gm);
+          } else {
+            gm.user.value.microphone.value = user.microphone.value;
+            gm.user.value.speaker.value = user.speaker.value;
+            gm.user.value.camera.value = user.camera.value;
+          }
+
+          Room? targetRoom = group.rooms
+              ?.firstWhereOrNull((room) => room.roomID == userRoom!.roomID);
+          if (targetRoom == null) {
+            group.rooms?.add(userRoom);
+            targetRoom = userRoom;
+          }
+
+          for (final room in group.rooms ?? <Room>[]) {
+            room.currentMembers.removeWhere(
+                (member) => member.user.userID == user.user.userID);
+          }
+          targetRoom.currentMembers.add(user);
+          gm.currentRoom.value = targetRoom;
+          group.groupmembers?.refresh();
+          group.rooms?.refresh();
         }
         log('${socketPREFIX}Kanal üyeleri güncellendi (${members.length} kişi)');
       } catch (e) {
@@ -626,6 +676,20 @@ class SocketioControllerV2 extends GetxController {
         log('${socketPREFIX}Speaker: ${user.user.displayName?.value} -> ${speakerOff ? "OFF" : "ON"}');
       } catch (e) {
         log('${socketPREFIX}Hata (user_speaker_state): $e');
+      }
+    });
+
+    // ─── KAMERA DURUMU değişti ───────────────────────────────────────────────
+    socket.on('user_camera_state', (data) {
+      try {
+        final Player user =
+            Player.fromJson(data['user'] as Map<String, dynamic>);
+        final bool cameraOn = data['cameraOn'] ?? false;
+        if (user.user.userID == null) return;
+        _updateUserCameraState(user.user.userID!, cameraOn);
+        log('${socketPREFIX}Camera: ${user.user.displayName?.value} -> ${cameraOn ? "ON" : "OFF"}');
+      } catch (e) {
+        log('${socketPREFIX}Hata (user_camera_state): $e');
       }
     });
 
@@ -825,8 +889,9 @@ class SocketioControllerV2 extends GetxController {
     final room = findmyRoomanyWhereGroup();
     final mic = u.microphone.value ? 'mic:on' : 'mic:off';
     final spk = u.speaker.value ? 'spk:on' : 'spk:off';
+    final cam = u.camera.value ? 'cam:on' : 'cam:off';
     final roomName = room?.name.value ?? 'no room';
-    return '[$mic | $spk | $roomName]';
+    return '[$mic | $spk | $cam | $roomName]';
   }
 
   Groupmember? _findMember(RxList<Groupmember>? members, int? userID) {
@@ -867,6 +932,24 @@ class SocketioControllerV2 extends GetxController {
         for (final player in room.currentMembers) {
           if (player.user.userID == userID) {
             player.speaker.value = speakerOn;
+          }
+        }
+      }
+    }
+  }
+
+  void _updateUserCameraState(int userID, bool cameraOn) {
+    if (groups.value == null) return;
+    for (final group in groups.value!) {
+      for (final member in group.groupmembers ?? <Groupmember>[]) {
+        if (member.user.value.user.userID == userID) {
+          member.user.value.camera.value = cameraOn;
+        }
+      }
+      for (final room in group.rooms ?? <Room>[]) {
+        for (final player in room.currentMembers) {
+          if (player.user.userID == userID) {
+            player.camera.value = cameraOn;
           }
         }
       }
@@ -1147,6 +1230,20 @@ class SocketioControllerV2 extends GetxController {
       voiceService.setSpeakerEnabled(newSpeakerState);
       userUpdate(user);
     });
+  }
+
+  Future<void> cameraOnOff(Player user) async {
+    final newCameraState = !user.camera.value;
+    final success = await voiceService.setCameraEnabled(newCameraState);
+    if (!success) {
+      log('${socketPREFIX}Kamera durumu değiştirilemedi ${_stateLog()}');
+      return;
+    }
+
+    user.camera.value = newCameraState;
+    _updateUserCameraState(user.user.userID ?? -1, newCameraState);
+    userUpdate(user);
+    log('${socketPREFIX}CAMERA_${newCameraState ? "ON" : "OFF"} ${_stateLog()}');
   }
 
   void changeroom(Room? room) {

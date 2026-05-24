@@ -9,6 +9,7 @@ class Player {
   RxBool microphoneAccess;
   RxBool speaker;
   RxBool speakerAccess;
+  RxBool camera;
   // Ses yayını aktif mi (başkalarının mikrofon aktivitesi için)
   RxBool isSpeaking;
 
@@ -18,11 +19,13 @@ class Player {
     bool microphoneAccess = false,
     bool speaker = false,
     bool speakerAccess = false,
+    bool camera = false,
     bool isSpeaking = false,
   })  : microphone = RxBool(microphone),
         microphoneAccess = RxBool(microphoneAccess),
         speaker = RxBool(speaker),
         speakerAccess = RxBool(speakerAccess),
+        camera = RxBool(camera),
         isSpeaking = RxBool(isSpeaking);
 
   Map<String, dynamic> toJson() {
@@ -32,6 +35,7 @@ class Player {
       'microphoneAccess': microphoneAccess.value,
       'speaker': speaker.value,
       'speakerAccess': speakerAccess.value,
+      'camera': camera.value,
     };
   }
 
@@ -42,6 +46,7 @@ class Player {
       microphoneAccess: json['microphoneAccess'] ?? false,
       speaker: json['speaker'] ?? false,
       speakerAccess: json['speakerAccess'] ?? false,
+      camera: json['camera'] ?? false,
     );
   }
 }
