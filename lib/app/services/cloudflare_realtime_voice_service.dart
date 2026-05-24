@@ -102,10 +102,10 @@ class CloudflareRealtimeVoiceService extends GetxService {
     }
 
     if (_currentRoom != null || isJoined.value) {
-      // Oda değişikliği: mic stream'i canlı tut, sadece PC ve session'ı kapat
+      log('${_prefix}join: oda değişikliği, eski session kapatılıyor');
       await leave(sendEvent: true, stopLocalMedia: false);
     } else {
-      // İlk katılım veya pre-warm: PC ve stream'i koru, sadece session durumunu sıfırla
+      log('${_prefix}join: ilk katılım / pre-warm, session sıfırlanıyor');
       _sessionId = null;
       _localAudioTrackName = null;
       _localVideoTrackName = null;
@@ -117,6 +117,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
 
     try {
       await _ensurePeerConnection();
+      log('${_prefix}join: PC hazır, offer oluşturuluyor');
       final offer = await _peerConnection!.createOffer({
         'offerToReceiveAudio': true,
         'offerToReceiveVideo': true,
@@ -131,6 +132,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
           'sessionDescription': offer.toMap(),
         },
         ack: (data) {
+          log('${_prefix}voice:join ack alındı');
           _handleSession(data);
         },
       );
@@ -432,9 +434,11 @@ class CloudflareRealtimeVoiceService extends GetxService {
     _sessionId = sessionId;
     isJoined.value = true;
     isConnecting.value = false;
+    log('${_prefix}session alındı: $sessionId');
 
     final sessionDescription = _asMap(payload['sessionDescription']);
     _queueNegotiation(() async {
+      log('${_prefix}publish audio başlıyor');
       if (sessionDescription != null) {
         await _setRemoteDescription(sessionDescription);
       }
@@ -448,6 +452,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
     });
 
     final existingTracks = payload['existingTracks'];
+    log('${_prefix}mevcut track sayısı: ${existingTracks is List ? existingTracks.length : 0}');
     if (existingTracks is List && existingTracks.isNotEmpty) {
       _subscribeToTracksBatch(existingTracks);
     }
@@ -831,6 +836,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
     _pendingVideoUserIds.clear();
     _subscribingTrackNames.clear();
     _subscribedTrackNames.clear();
+    // Kuyruktaki eski negotiation'lar yeni session'ı bloke etmesin
+    _negotiationQueue = Future.value();
 
     for (final renderer in remoteVideoRenderersByUser.values) {
       renderer.srcObject = null;
