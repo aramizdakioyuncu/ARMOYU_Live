@@ -236,13 +236,16 @@ class CloudflareRealtimeVoiceService extends GetxService {
     _startLocalSpeakingMonitor();
 
     _peerConnection!.onTrack = (event) {
+      log('${_prefix}onTrack: kind=${event.track.kind} streams=${event.streams.length} enabled=${event.track.enabled} id=${event.track.id}');
       if (event.streams.isEmpty) {
+        log('${_prefix}onTrack: stream yok — track native katmanda alınıyor, ses çıkmalı');
         return;
       }
 
       final stream = event.streams.first;
       if (!remoteStreams.any((item) => item.id == stream.id)) {
         remoteStreams.add(stream);
+        log('${_prefix}onTrack: remoteStreams güncellendi (toplam ${remoteStreams.length})');
       }
 
       if (event.track.kind == 'video') {
@@ -581,12 +584,17 @@ class CloudflareRealtimeVoiceService extends GetxService {
                 })
             .toList();
 
+        log('${_prefix}Batch subscribe başlıyor: ${batchPayload.map((t) => t['trackName']).toList()} session=$_sessionId');
         final result = await _emitWithAckMap('voice:subscribe-batch', {
           'sessionId': _sessionId,
           'tracks': batchPayload,
         });
+        log('${_prefix}Batch subscribe ack: sessionDesc=${result?['sessionDescription'] != null} tracks=${(result?['tracks'] as List?)?.length ?? 0}');
 
-        if (result == null || result['sessionDescription'] == null) return;
+        if (result == null || result['sessionDescription'] == null) {
+          log('${_prefix}Batch subscribe: sessionDescription yok, çıkılıyor');
+          return;
+        }
 
         final responseTracks = result['tracks'] as List? ?? [];
         for (final t in validTracks) {
@@ -599,10 +607,12 @@ class CloudflareRealtimeVoiceService extends GetxService {
         await _setRemoteDescription(_asMap(result['sessionDescription'])!);
         final answer = await _peerConnection!.createAnswer();
         await _peerConnection!.setLocalDescription(answer);
-        _socket!.emit('voice:subscribe-answer', {
+        log('${_prefix}Batch subscribe: answer oluşturuldu, server\'a gönderiliyor');
+        final answerResult = await _emitWithAckMap('voice:subscribe-answer', {
           'sessionId': _sessionId,
           'sessionDescription': answer.toMap(),
         });
+        log('${_prefix}Batch subscribe: answer ack -> $answerResult');
 
         for (final t in validTracks) {
           _subscribedTrackNames.add(t['trackName'].toString());
@@ -632,11 +642,11 @@ class CloudflareRealtimeVoiceService extends GetxService {
     await _setRemoteDescription(sessionDescription);
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
-    _socket!.emit('voice:subscribe-answer', {
+    final answerResult = await _emitWithAckMap('voice:subscribe-answer', {
       'sessionId': _sessionId,
       'sessionDescription': answer.toMap(),
     });
-    log('${_prefix}Track subscribe edildi: ${payload['trackName']}');
+    log('${_prefix}Track subscribe edildi: ${payload['trackName']} | answer ack -> $answerResult');
   }
 
   void _registerRemoteVideoMapping(Map<String, dynamic> payload) {
