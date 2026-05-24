@@ -1209,7 +1209,6 @@ class SocketioControllerV2 extends GetxController {
     final event = newMicState ? 'MIC_UNMUTE' : 'MIC_MUTE';
 
     socket.emitWithAck(event, null, ack: (data) {
-      log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.microphone.value = newMicState;
       voiceService.setMicrophoneEnabled(newMicState);
       if (newMicState && user.speaker.value == false) {
@@ -1217,6 +1216,7 @@ class SocketioControllerV2 extends GetxController {
         voiceService.setSpeakerEnabled(true);
       }
       userUpdate(user);
+      log('$socketPREFIX$event ack: $data ${_stateLog()}');
     });
   }
 
@@ -1225,10 +1225,10 @@ class SocketioControllerV2 extends GetxController {
     final event = newSpeakerState ? 'SPEAKER_UNMUTE' : 'SPEAKER_MUTE';
 
     socket.emitWithAck(event, null, ack: (data) {
-      log('$socketPREFIX$event ack: $data ${_stateLog()}');
       user.speaker.value = newSpeakerState;
       voiceService.setSpeakerEnabled(newSpeakerState);
       userUpdate(user);
+      log('$socketPREFIX$event ack: $data ${_stateLog()}');
     });
   }
 

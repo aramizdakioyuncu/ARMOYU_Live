@@ -17,6 +17,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
   static const _audioLevelThreshold = 0.02;
   static const _audioEnergyThreshold = 0.00015;
   static const _quietSamplesBeforeStop = 3;
+  static const _socketAckTimeout = Duration(seconds: 10);
 
   io.Socket? _socket;
   webrtc.RTCPeerConnection? _peerConnection;
@@ -34,6 +35,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
   double? _lastAudioEnergy;
   double? _lastAudioDuration;
   Timer? _localSpeakingTimer;
+  final _subscribingTrackNames = <String>{};
+  final _subscribedTrackNames = <String>{};
   Future<void> _negotiationQueue = Future.value();
 
   final _remoteVideoUserByMid = <String, int>{};
@@ -75,7 +78,6 @@ class CloudflareRealtimeVoiceService extends GetxService {
     socket.on('voice:session', _handleSession);
     socket.on('voice:publish-answer', _handlePublishAnswer);
     socket.on('voice:track-added', _handleTrackAdded);
-    socket.on('voice:subscribe-offer', _handleSubscribeOffer);
     socket.on('voice:track-removed', _handleTrackRemoved);
   }
 
@@ -170,7 +172,11 @@ class CloudflareRealtimeVoiceService extends GetxService {
 
   Future<bool> setCameraEnabled(bool enabled) async {
     if (enabled) {
-      return _enableCamera();
+      var success = false;
+      await _queueNegotiation(() async {
+        success = await _enableCamera();
+      });
+      return success;
     }
 
     await _stopLocalCamera(sendCloseEvent: true);
@@ -364,21 +370,26 @@ class CloudflareRealtimeVoiceService extends GetxService {
       trackPayload['mid'] = mid;
     }
 
-    _socket!.emitWithAck(
-      'voice:publish-offer',
-      {
-        'sessionId': _sessionId,
-        'roomID': _currentRoom!.roomID,
-        'groupID': _currentRoom!.groupID,
-        'trackName': trackName,
-        'kind': kind,
-        'sessionDescription': offer.toMap(),
-        'tracks': [trackPayload],
-      },
-      ack: (data) {
-        _handlePublishAnswer(data);
-      },
-    );
+    final payload = await _emitWithAckMap('voice:publish-offer', {
+      'sessionId': _sessionId,
+      'roomID': _currentRoom!.roomID,
+      'groupID': _currentRoom!.groupID,
+      'trackName': trackName,
+      'kind': kind,
+      'sessionDescription': offer.toMap(),
+      'tracks': [trackPayload],
+    });
+    if (_isErrorPayload(payload)) {
+      throw StateError(
+        'Track publish basarisiz: ${payload?['message'] ?? payload}',
+      );
+    }
+
+    final sessionDescription = _asMap(payload?['sessionDescription']);
+    if (sessionDescription != null) {
+      await _setRemoteDescription(sessionDescription);
+    }
+    log('${_prefix}Track publish edildi: $kind $trackName');
   }
 
   void _handleSession(dynamic data) {
@@ -411,7 +422,7 @@ class CloudflareRealtimeVoiceService extends GetxService {
       setSpeakerEnabled(AppList.sessions.first.currentUser.speaker.value);
       if (_restoreCameraAfterJoin) {
         _restoreCameraAfterJoin = false;
-        await setCameraEnabled(true);
+        await _enableCamera();
       }
     });
 
@@ -450,25 +461,6 @@ class CloudflareRealtimeVoiceService extends GetxService {
     _subscribeToTrack(payload);
   }
 
-  void _handleSubscribeOffer(dynamic data) {
-    final payload = _asMap(data);
-    final sessionDescription = _asMap(payload?['sessionDescription']);
-    if (sessionDescription == null || _socket == null || _sessionId == null) {
-      return;
-    }
-
-    _registerRemoteVideoMapping(payload!);
-    _queueNegotiation(() async {
-      await _setRemoteDescription(sessionDescription);
-      final answer = await _peerConnection!.createAnswer();
-      await _peerConnection!.setLocalDescription(answer);
-      _socket!.emit('voice:subscribe-answer', {
-        'sessionId': _sessionId,
-        'sessionDescription': answer.toMap(),
-      });
-    });
-  }
-
   void _handleTrackRemoved(dynamic data) {
     final payload = _asMap(data);
     final trackName = payload?['trackName']?.toString();
@@ -497,22 +489,50 @@ class CloudflareRealtimeVoiceService extends GetxService {
         remoteSessionId == _sessionId ||
         trackName == null ||
         trackName == _localAudioTrackName ||
-        trackName == _localVideoTrackName) {
+        trackName == _localVideoTrackName ||
+        _subscribingTrackNames.contains(trackName) ||
+        _subscribedTrackNames.contains(trackName)) {
       return;
     }
 
-    _socket!.emitWithAck(
-      'voice:subscribe',
-      {
-        'sessionId': _sessionId,
-        'remoteSessionId': remoteSessionId,
-        'trackName': trackName,
-        'kind': kind,
-      },
-      ack: (data) {
-        _handleSubscribeOffer(data);
-      },
-    );
+    _subscribingTrackNames.add(trackName);
+    _queueNegotiation(() async {
+      try {
+        final payload = await _emitWithAckMap('voice:subscribe', {
+          'sessionId': _sessionId,
+          'remoteSessionId': remoteSessionId,
+          'trackName': trackName,
+          'kind': kind,
+        });
+        await _applySubscribeOffer(payload);
+        _subscribedTrackNames.add(trackName);
+      } finally {
+        _subscribingTrackNames.remove(trackName);
+      }
+    });
+  }
+
+  Future<void> _applySubscribeOffer(Map<String, dynamic>? payload) async {
+    if (_isErrorPayload(payload)) {
+      throw StateError(
+        'Track subscribe basarisiz: ${payload?['message'] ?? payload}',
+      );
+    }
+
+    final sessionDescription = _asMap(payload?['sessionDescription']);
+    if (sessionDescription == null || _socket == null || _sessionId == null) {
+      return;
+    }
+
+    _registerRemoteVideoMapping(payload!);
+    await _setRemoteDescription(sessionDescription);
+    final answer = await _peerConnection!.createAnswer();
+    await _peerConnection!.setLocalDescription(answer);
+    _socket!.emit('voice:subscribe-answer', {
+      'sessionId': _sessionId,
+      'sessionDescription': answer.toMap(),
+    });
+    log('${_prefix}Track subscribe edildi: ${payload['trackName']}');
   }
 
   void _registerRemoteVideoMapping(Map<String, dynamic> payload) {
@@ -580,10 +600,39 @@ class CloudflareRealtimeVoiceService extends GetxService {
     await renderer?.dispose();
   }
 
-  void _queueNegotiation(Future<void> Function() action) {
+  Future<void> _queueNegotiation(Future<void> Function() action) {
     _negotiationQueue = _negotiationQueue.then((_) => action()).catchError((e) {
       log('${_prefix}Negotiation hatası: $e');
     });
+    return _negotiationQueue;
+  }
+
+  Future<Map<String, dynamic>?> _emitWithAckMap(
+    String event,
+    Map<String, dynamic> payload,
+  ) {
+    if (_socket == null) {
+      return Future.value(null);
+    }
+
+    final completer = Completer<Map<String, dynamic>?>();
+    _socket!.emitWithAck(
+      event,
+      payload,
+      ack: (data) {
+        if (!completer.isCompleted) {
+          completer.complete(_asMap(data));
+        }
+      },
+    );
+
+    return completer.future.timeout(
+      _socketAckTimeout,
+      onTimeout: () {
+        log('$_prefix$event ack zaman asimi');
+        return null;
+      },
+    );
   }
 
   Future<void> _setRemoteDescription(Map<String, dynamic> description) async {
@@ -679,6 +728,8 @@ class CloudflareRealtimeVoiceService extends GetxService {
     remoteStreams.clear();
     _remoteVideoUserByMid.clear();
     _pendingVideoUserIds.clear();
+    _subscribingTrackNames.clear();
+    _subscribedTrackNames.clear();
 
     for (final renderer in remoteVideoRenderersByUser.values) {
       renderer.srcObject = null;
@@ -794,6 +845,13 @@ class CloudflareRealtimeVoiceService extends GetxService {
       return double.tryParse(value);
     }
     return null;
+  }
+
+  bool _isErrorPayload(Map<String, dynamic>? payload) {
+    return payload == null ||
+        payload['status'] == 'error' ||
+        payload['code'] != null ||
+        payload['error'] != null;
   }
 
   Map<String, dynamic>? _asMap(dynamic value) {
