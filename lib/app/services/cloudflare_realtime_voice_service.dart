@@ -58,11 +58,18 @@ class CloudflareRealtimeVoiceService extends GetxService {
 
     try {
       await _ensurePeerConnection();
+      final offer = await _peerConnection!.createOffer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': false,
+      });
+      await _peerConnection!.setLocalDescription(offer);
+
       _socket!.emitWithAck(
         'voice:join',
         {
           'groupID': room.groupID,
           'roomID': room.roomID,
+          'sessionDescription': offer.toMap(),
         },
         ack: (data) {
           _handleSession(data);
@@ -211,11 +218,21 @@ class CloudflareRealtimeVoiceService extends GetxService {
       return;
     }
 
+    if (_sessionId == sessionId && isJoined.value) {
+      return;
+    }
+
     _sessionId = sessionId;
     isJoined.value = true;
     isConnecting.value = false;
 
-    unawaited(_publishLocalAudioTrack());
+    final sessionDescription = _asMap(payload['sessionDescription']);
+    _queueNegotiation(() async {
+      if (sessionDescription != null) {
+        await _setRemoteDescription(sessionDescription);
+      }
+      await _publishLocalAudioTrack();
+    });
 
     final existingTracks = payload['existingTracks'];
     if (existingTracks is List) {
